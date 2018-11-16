@@ -18,7 +18,8 @@ public class QTable {
 		// TODO Auto-generated method stub
 		for (int stateN = 0; stateN < State.NumStates; stateN++)   
 		      for (int actionN = 0; actionN < Action.NumRobotActions; actionN++)   
-		        table[stateN][actionN] = Math.random();  
+		        //table[stateN][actionN] = Math.random();  
+		    	  table[stateN][actionN] = 0.0;  
 	}
 	
 	public double getQValue(int state, int action) {

@@ -55,7 +55,7 @@ public class LearningAgent {
 		if (thres < explorationRate) {
 			// take exploration move
 			Random ran = new Random();
-			action = ran.nextInt(Action.NumRobotActions -1);
+			action = ran.nextInt(Action.NumRobotActions);
 		} else {
 			// table greedy move
 			action = table.getBestAction(state);
