@@ -5,7 +5,7 @@ public class LearningAgent {
 
 	public static final double LearningRate = 0.1;   // alpha
 	public static final double DiscountRate = 0.9;   // gamma
-	public static double explorationRate = 0.8;   
+	public static double explorationRate = 0.2;   
 	private int currentState;   
 	private int currentAction;   
 	private boolean firstRound = true;   
@@ -28,7 +28,7 @@ public class LearningAgent {
 			
 		}
 		currentState = nextState;
-		//currentAction = nextAction;
+		currentAction = nextAction;
 	}
 	
 	// On-policy

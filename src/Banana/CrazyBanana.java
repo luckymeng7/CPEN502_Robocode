@@ -1,7 +1,6 @@
 package Banana;
 
 import java.awt.Color;
-import java.awt.geom.*;   
 import java.io.IOException;
 import java.io.PrintStream;
 
@@ -9,41 +8,35 @@ import robocode.*;
 
 import Learning.*;
 
-
 // API help : http://robocode.sourceforge.net/docs/robocode/robocode/Robot.html
 
 /**
  * CrazyBanana - a robot by xmli01
  */
-public class CrazyBanana extends AdvancedRobot 
-{
+public class CrazyBanana extends AdvancedRobot {
 	
 	public static final double PI = Math.PI;   
 	private Target target;   
 	private QTable table;   
 	private LearningAgent agent;   
 	private double reward = 0.0;   
-	private double firePower;   
-	//private int direction = 1;   
 	private int isHitWall = 0;   
 	private int isHitByBullet = 0;   
-
-	private boolean isSARSA = true;
 	
+	private double oppoDist, oppoBearing;
 	private boolean found = false;
-	private double oppoDist, oppoBearing; 
+	private int state, action; 
 	
 	private double rewardForWin=100;
 	private double rewardForDeath=-20;
 	private double accumuReward=0.0;
 	
-	int state, action;
+	private boolean interRewards = true;
+	private boolean isSARSA = true;
 	
-
-    
 	/**
 	 * run: CrazyBanana's default behavior
-	 */
+	 */   
 	public void run() {
 		// Initialization of the RL
 		table = new QTable();  
@@ -57,11 +50,6 @@ public class CrazyBanana extends AdvancedRobot
 		setAdjustGunForRobotTurn(true); //Gun not Fix to body
 		setAdjustRadarForGunTurn(true); // Radar not Fix to boby
 		execute();
-		//System.out.println("moveRobot Action ");
-		if(getRoundNum()>500)
-	    {
-			LearningAgent.explorationRate=0.3;
-	     }
 		// Robot main loop
 		while(true) {
 			turnRadarRightRadians(2*PI);
@@ -119,15 +107,9 @@ public class CrazyBanana extends AdvancedRobot
 		
 	}
 	
+	////======= Internal Supportive Functions ========
 	private void scanAndFire() {
 		// TODO Auto-generated method stub
-		/*
-		while (!found) {
-			setTurnRadarLeft(10);
-			execute();
-		}
-		fire (2);
-		*/
 		found = false;
 		while (!found) {
 			setTurnRadarLeft(360);
@@ -164,6 +146,8 @@ public class CrazyBanana extends AdvancedRobot
 		return radarOffset;
 	}
 	
+	//======= Event ========
+	
 	/**
 	 * onBulletHit: What to do when hit other robots
 	 */
@@ -172,7 +156,7 @@ public class CrazyBanana extends AdvancedRobot
 		if (target.name == e.getName()) {     
 		    double change = e.getBullet().getPower() * 9;   
 		    System.out.println("Bullet Hit: " + change);   
-		    reward += change;   
+		    if (interRewards) reward += change;   
 		}   
     }  
 	
@@ -184,7 +168,7 @@ public class CrazyBanana extends AdvancedRobot
     {   
 		double change = -e.getBullet().getPower() * 7.5;   
 		System.out.println("Bullet Missed: " + change);   
-		reward += change;   
+		if (interRewards) reward += change;   
     }  
 
 	/**
@@ -223,7 +207,7 @@ public class CrazyBanana extends AdvancedRobot
 			//double change = -(4 * power + 2 * (power - 1)) * 2;   
 			double change = -6 * power;
 			System.out.println("Hit By Bullet: " + change);   
-			reward += change;   
+			if (interRewards) reward += change;   
 		}
 		isHitByBullet = 1;  
 	}
@@ -235,7 +219,7 @@ public class CrazyBanana extends AdvancedRobot
 		if (target.name == e.getName()) {   
 			double change = -6.0;   
 			System.out.println("Hit Robot: " + change);   
-			reward += change;   
+			if (interRewards) reward += change;   
 		}   
     }  
 	
@@ -246,13 +230,9 @@ public class CrazyBanana extends AdvancedRobot
 		//double change = -(Math.abs(getVelocity()) * 0.5 - 1) * 10;   
 		double change = -10.0;   
 		System.out.println("Hit Wall: " + change);   
-        reward += change;   
+		if (interRewards) reward += change;   
         isHitWall = 1;
-       /*
-        setTurnLeft(90);
-        setAhead(30);
-        execute();
-        */
+      
 	}	
 	
 	/**
@@ -262,7 +242,7 @@ public class CrazyBanana extends AdvancedRobot
 		if (e.getName() == target.name) {
 			target.distance = 10000; 
 		}
-		reward += 20;
+		if (interRewards) reward += 20;
     }   
 	
 	/**
@@ -327,29 +307,23 @@ public class CrazyBanana extends AdvancedRobot
 				System.out.println("Exception trying to close witer: " + e); 
 			} 
 		} 
-    }	
+    }	    
     
-
-    public void loadData()   
-    {   
-      try   
-      {   
-        table.loadData(getDataFile("movement.dat"));   
+    //======= Load and Save the Look Up Table =========
+    public void loadData()   {   
+      try   {   
+        table.loadData(getDataFile("LUT.dat"));   
       }   
       catch (Exception e)   {
       	out.println("Exception trying to write: " + e); 
-
       }   
     }   
      
-    public void saveData()   
-    {   
-      try   
-      {   
-        table.saveData(getDataFile("movement.dat"));   
+    public void saveData()   {   
+      try   {   
+        table.saveData(getDataFile("LUT.dat"));   
       }   
-      catch (Exception e)   
-      {   
+      catch (Exception e)   {   
         out.println("Exception trying to write: " + e);   
       }   
     }   
