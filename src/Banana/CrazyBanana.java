@@ -31,7 +31,7 @@ public class CrazyBanana extends AdvancedRobot {
 	private double rewardForDeath=-20;
 	private double accumuReward=0.0;
 	
-	private boolean interRewards = true;
+	private boolean interRewards = false;
 	private boolean isSARSA = true;
 	
 	/**
