@@ -20,7 +20,7 @@ public class CrazyBanana extends AdvancedRobot {
 	private QTable table;   
 	private LearningAgent agent;   
 	private double reward = 0.0;   
-	private int isHitWall = 0;   
+	//private int isHitWall = 0;   
 	private int isHitByBullet = 0;   
 	
 	private double oppoDist, oppoBearing;
@@ -31,7 +31,7 @@ public class CrazyBanana extends AdvancedRobot {
 	private double rewardForDeath=-20;
 	private double accumuReward=0.0;
 	
-	private boolean interRewards = false;
+	private boolean interRewards = true;
 	private boolean isSARSA = true;
 	
 	/**
@@ -101,7 +101,7 @@ public class CrazyBanana extends AdvancedRobot {
 			// Reset the variables for next learn
 			accumuReward += reward;
 			reward = 0.0;
-			isHitWall = 0;
+			//isHitWall = 0;
 			isHitByBullet = 0;		
 		}
 		
@@ -127,8 +127,11 @@ public class CrazyBanana extends AdvancedRobot {
 		int heading = State.getHeading(getHeading());   
 		int targetDistance = State.getTargetDistance(target.distance);   
 		int targetBearing = State.getTargetBearing(target.bearing);   
+		int centerHorizontal = State.getCenterHorizontal(getX(),getBattleFieldWidth());
+		int centerVertical = State.getCenterVertical(getY(), getBattleFieldHeight());
 		//System.out.println("State(" + heading + ", " + targetDistance + ", " + targetBearing + ", " + isHitWall + ", " + isHitByBullet + ")");   
-		int state = State.Mapping[heading][targetDistance][targetBearing][isHitWall][isHitByBullet];   
+		//int state = State.Mapping[heading][targetDistance][targetBearing][isHitWall][isHitByBullet]; 
+		int state = State.Mapping[heading][targetDistance][targetBearing][centerHorizontal][centerVertical][isHitByBullet]; 
 		return state;  
 	}
 
@@ -140,7 +143,7 @@ public class CrazyBanana extends AdvancedRobot {
 		if (radarOffset > PI) {
 			radarOffset -= 2*PI;
 		}
-		if (radarOffset < PI) {
+		if (radarOffset < -PI) {
 			radarOffset += 2*PI;
 		}
 		return radarOffset;
@@ -194,7 +197,7 @@ public class CrazyBanana extends AdvancedRobot {
           target.ctime = getTime();             //game time at which this scan was produced   
           target.speed = e.getVelocity();   
           target.distance = e.getDistance();   
-          target.energy = e.getEnergy();   
+          target.energy = e.getEnergy();
         }
 	}
 
@@ -231,7 +234,7 @@ public class CrazyBanana extends AdvancedRobot {
 		double change = -10.0;   
 		System.out.println("Hit Wall: " + change);   
 		if (interRewards) reward += change;   
-        isHitWall = 1;
+       // isHitWall = 1;
       
 	}	
 	

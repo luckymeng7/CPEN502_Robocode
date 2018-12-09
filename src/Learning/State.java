@@ -8,11 +8,14 @@ public class State {
 	public static final int NumHeading = 4;  
 	public static final int NumTargetDistance = 10;  
 	public static final int NumTargetBearing = 4;  
-	public static final int NumHitWall = 2;  
+	//public static final int NumHitWall = 2; 
+	public static final int NumHorizontalDistanceToCenter = 2; 
+	public static final int NumVerticalDistanceToCenter = 2; 
 	public static final int NumHitByBullet = 2;  
 	public static final int NumStates;  
-	public static final int Mapping[][][][][];  
+	public static final int Mapping[][][][][][];  
 
+	/*
 	static  {  
 		Mapping = new int[NumHeading][NumTargetDistance][NumTargetBearing][NumHitWall][NumHitByBullet];  
 		int count = 0;  
@@ -25,7 +28,22 @@ public class State {
 		  
 		NumStates = count;  
 	}  
-	  
+	 */
+	
+	static  {  
+		Mapping = new int[NumHeading][NumTargetDistance][NumTargetBearing][NumHorizontalDistanceToCenter][NumVerticalDistanceToCenter][NumHitByBullet];  
+		int count = 0;  
+		for (int a = 0; a < NumHeading; a++)  
+		  for (int b = 0; b < NumTargetDistance; b++)  
+		    for (int c = 0; c < NumTargetBearing; c++)  
+		      for (int d = 0; d < NumHorizontalDistanceToCenter; d++)  
+		    	for (int e = 0; e < NumVerticalDistanceToCenter; e++)  
+		          for (int f = 0; f < NumHitByBullet; f++)  
+		      Mapping[a][b][c][d][e][f] = count++;  
+		  
+		NumStates = count;  
+	}
+	
 	
 	public static int getHeading(double heading)  {  
 		double angle = 360 / NumHeading;  
@@ -51,6 +69,26 @@ public class State {
 		if (newBearing > PIx2)  
 			newBearing -= PIx2;  
 		return (int)(newBearing / angle);  
-  }  
+	}  
+	
+	public static int getCenterHorizontal (double robotX, double BattleFieldX)  {
+		int distanceToCenterH;
+		if (robotX > 50 || robotX < BattleFieldX-50 ) {
+			distanceToCenterH = 0;	// Safe
+		} else {
+			distanceToCenterH = 1;	// unSafe, too close to wall
+		}
+		return distanceToCenterH;
+	}
+	
+	public static int getCenterVertical (double robotY, double BattleFieldY)  {
+		int distanceToCenterV;
+		if (robotY > 50 || robotY < BattleFieldY-50 ) {
+			distanceToCenterV = 0;	// Safe
+		} else {
+			distanceToCenterV = 1;	// unSafe, too close to wall
+		}
+		return distanceToCenterV;
+	}
 	  
 }
