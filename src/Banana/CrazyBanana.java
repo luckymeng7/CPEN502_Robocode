@@ -33,6 +33,14 @@ public class CrazyBanana extends AdvancedRobot {
 	
 	private boolean interRewards = true;
 	private boolean isSARSA = true;
+	private boolean isOnline = true;
+	
+	private int battleHistory100 [];
+	private double winningRate;
+	private double winningRate100 [];
+	private double winningRateVariant;
+	private int battleIndex = 0;
+	
 	
 	/**
 	 * run: CrazyBanana's default behavior
@@ -50,59 +58,105 @@ public class CrazyBanana extends AdvancedRobot {
 		setAdjustGunForRobotTurn(true); //Gun not Fix to body
 		setAdjustRadarForGunTurn(true); // Radar not Fix to boby
 		execute();
-		// Robot main loop
-		while(true) {
+		
+
+		//Get Last State
+		state = getState();
+		if(isSARSA && !isOnline) {		
 			turnRadarRightRadians(2*PI);
-			// Get previous state
-			state = getState();
 			action = agent.selectAction(state);
-			// Move the Robot
-			switch (action) {
-				case Action.RobotAhead:
-					setAhead(Action.RobotMoveDistance);
-					break;
-				case Action.RobotBack:
-					setBack(Action.RobotMoveDistance);
-					break;
-				case Action.RobotAheadTurnLeft:
-					setAhead(Action.RobotMoveDistance);
-					setTurnLeft(Action.RobotTurnDegree);
-					break;
-				case Action.RobotAheadTurnRight:
-					setAhead(Action.RobotMoveDistance);
-					setTurnRight(Action.RobotTurnDegree);
-					break;
-				case Action.RobotBackTurnLeft:
-					setBack(Action.RobotMoveDistance);
-					setTurnLeft(Action.RobotTurnDegree);
-					break;
-				case Action.RobotBackTurnRight:
-					setBack(Action.RobotMoveDistance);
-					setTurnRight(Action.RobotTurnDegree);
-					break;
-				case Action.RobotFire:
-					scanAndFire();
-					break;
-				default:
-					System.out.println("Wrong Action Order");
-					break;	
-			}
-			execute();
-			
-			turnRadarRightRadians(2*PI);
-			// Updated state
-			state = getState();
-			if (isSARSA) {
+			while(true) {									
+				switch (action) {
+					case Action.RobotAhead:
+						setAhead(Action.RobotMoveDistance);
+						break;
+					case Action.RobotBack:
+						setBack(Action.RobotMoveDistance);
+						break;
+					case Action.RobotAheadTurnLeft:
+						setAhead(Action.RobotMoveDistance);
+						setTurnLeft(Action.RobotTurnDegree);
+						break;
+					case Action.RobotAheadTurnRight:
+						setAhead(Action.RobotMoveDistance);
+						setTurnRight(Action.RobotTurnDegree);
+						break;
+					case Action.RobotBackTurnLeft:
+						setBack(Action.RobotMoveDistance);
+						setTurnLeft(Action.RobotTurnDegree);
+						break;
+					case Action.RobotBackTurnRight:
+						setBack(Action.RobotMoveDistance);
+						setTurnRight(Action.RobotTurnDegree);
+						break;
+					case Action.RobotFire:
+						scanAndFire();
+						break;
+					default:
+						System.out.println("Wrong Action Order");
+						break;	
+				}					
+				execute();					
+				turnRadarRightRadians(2*PI);
+				//Update states
+				state = getState();
+				action = agent.selectAction(state);
 				agent.SARSALearn(state, action, reward);
-			} else {
-				agent.QLearn(state, action, reward);
+				accumuReward += reward;
+				
+				//Reset Values
+				reward = 0.0d;
+				//isHitWall = 0;
+				isHitByBullet = 0;
 			}
-			//System.out.println("Action:" + action );   
-			// Reset the variables for next learn
-			accumuReward += reward;
-			reward = 0.0;
-			//isHitWall = 0;
-			isHitByBullet = 0;		
+		}
+		else { 
+			// Q-Learning with Online  
+			while(true) {
+				//state = getState();//Get Last State
+				turnRadarRightRadians(2*PI);					
+				action = agent.selectAction(state);					
+				switch (action) {
+					case Action.RobotAhead:
+						setAhead(Action.RobotMoveDistance);
+						break;
+					case Action.RobotBack:
+						setBack(Action.RobotMoveDistance);
+						break;
+					case Action.RobotAheadTurnLeft:
+						setAhead(Action.RobotMoveDistance);
+						setTurnLeft(Action.RobotTurnDegree);
+						break;
+					case Action.RobotAheadTurnRight:
+						setAhead(Action.RobotMoveDistance);
+						setTurnRight(Action.RobotTurnDegree);
+						break;
+					case Action.RobotBackTurnLeft:
+						setBack(Action.RobotMoveDistance);
+						setTurnLeft(Action.RobotTurnDegree);
+						break;
+					case Action.RobotBackTurnRight:
+						setBack(Action.RobotMoveDistance);
+						setTurnRight(Action.RobotTurnDegree);
+						break;
+					case Action.RobotFire:
+						scanAndFire();
+						break;
+					default:
+						System.out.println("Wrong Action Order");
+						break;	
+				}				
+				execute();					
+				turnRadarRightRadians(2*PI);
+				//Update states
+				state = getState();
+				agent.QLearn(state, action, reward);
+				accumuReward += reward;					
+				//Reset Values
+				reward = 0.0d;
+				//isHitWall = 0;
+				isHitByBullet = 0;
+			}
 		}
 		
 	}
@@ -127,11 +181,11 @@ public class CrazyBanana extends AdvancedRobot {
 		int heading = State.getHeading(getHeading());   
 		int targetDistance = State.getTargetDistance(target.distance);   
 		int targetBearing = State.getTargetBearing(target.bearing);   
-		int centerHorizontal = State.getCenterHorizontal(getX(),getBattleFieldWidth());
-		int centerVertical = State.getCenterVertical(getY(), getBattleFieldHeight());
+		int HorizontalNSafe = State.getHorizontalNSafe(getX(),getBattleFieldWidth());
+		int VerticalNSafe = State.getVerticalNSafe(getY(), getBattleFieldHeight());
 		//System.out.println("State(" + heading + ", " + targetDistance + ", " + targetBearing + ", " + isHitWall + ", " + isHitByBullet + ")");   
 		//int state = State.Mapping[heading][targetDistance][targetBearing][isHitWall][isHitByBullet]; 
-		int state = State.Mapping[heading][targetDistance][targetBearing][centerHorizontal][centerVertical][isHitByBullet]; 
+		int state = State.Mapping[heading][targetDistance][targetBearing][HorizontalNSafe][VerticalNSafe][isHitByBullet]; 
 		return state;  
 	}
 
@@ -311,6 +365,25 @@ public class CrazyBanana extends AdvancedRobot {
 			} 
 		} 
     }	    
+    
+    
+    //======= Battle History and Variantion ===========
+    public void initializeBattleHistory () {
+    	
+    }
+    
+    public void initializeVariance () {
+    	
+    }
+    
+    public void updateBattleHistory (int win, int index) {
+    	
+    }
+    
+    public void updateVariance (int index) {
+    	
+    }
+    
     
     //======= Load and Save the Look Up Table =========
     public void loadData()   {   

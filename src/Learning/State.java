@@ -9,8 +9,8 @@ public class State {
 	public static final int NumTargetDistance = 10;  
 	public static final int NumTargetBearing = 4;  
 	//public static final int NumHitWall = 2; 
-	public static final int NumHorizontalDistanceToCenter = 2; 
-	public static final int NumVerticalDistanceToCenter = 2; 
+	public static final int NumHorizontalDistanceNSafe = 2; 
+	public static final int NumVerticalDistanceNSafe = 2; 
 	public static final int NumHitByBullet = 2;  
 	public static final int NumStates;  
 	public static final int Mapping[][][][][][];  
@@ -31,13 +31,13 @@ public class State {
 	 */
 	
 	static  {  
-		Mapping = new int[NumHeading][NumTargetDistance][NumTargetBearing][NumHorizontalDistanceToCenter][NumVerticalDistanceToCenter][NumHitByBullet];  
+		Mapping = new int[NumHeading][NumTargetDistance][NumTargetBearing][NumHorizontalDistanceNSafe][NumVerticalDistanceNSafe][NumHitByBullet];  
 		int count = 0;  
 		for (int a = 0; a < NumHeading; a++)  
 		  for (int b = 0; b < NumTargetDistance; b++)  
 		    for (int c = 0; c < NumTargetBearing; c++)  
-		      for (int d = 0; d < NumHorizontalDistanceToCenter; d++)  
-		    	for (int e = 0; e < NumVerticalDistanceToCenter; e++)  
+		      for (int d = 0; d < NumHorizontalDistanceNSafe; d++)  
+		    	for (int e = 0; e < NumVerticalDistanceNSafe; e++)  
 		          for (int f = 0; f < NumHitByBullet; f++)  
 		      Mapping[a][b][c][d][e][f] = count++;  
 		  
@@ -71,9 +71,9 @@ public class State {
 		return (int)(newBearing / angle);  
 	}  
 	
-	public static int getCenterHorizontal (double robotX, double BattleFieldX)  {
+	public static int getHorizontalNSafe (double robotX, double BattleFieldX)  {
 		int distanceToCenterH;
-		if (robotX > 50 || robotX < BattleFieldX-50 ) {
+		if (robotX > 50 && robotX < BattleFieldX-50 ) {
 			distanceToCenterH = 0;	// Safe
 		} else {
 			distanceToCenterH = 1;	// unSafe, too close to wall
@@ -81,14 +81,41 @@ public class State {
 		return distanceToCenterH;
 	}
 	
-	public static int getCenterVertical (double robotY, double BattleFieldY)  {
+	public static int getVerticalNSafe (double robotY, double BattleFieldY)  {
 		int distanceToCenterV;
-		if (robotY > 50 || robotY < BattleFieldY-50 ) {
+		if (robotY > 50 && robotY < BattleFieldY-50 ) {
 			distanceToCenterV = 0;	// Safe
 		} else {
 			distanceToCenterV = 1;	// unSafe, too close to wall
 		}
 		return distanceToCenterV;
 	}
+	
+	public static int getStateIndex(int heading, int distance, int bearing, int horizontalUnsafe,int verticalUnsafe, int hitbybullet) {
+		return Mapping[heading][distance][bearing][horizontalUnsafe][verticalUnsafe][hitbybullet];
+	}
+	
+	public static int[] getStateFromIndex(int index)
+	 {
+		 int heading = index/(NumTargetDistance*NumTargetBearing*NumHorizontalDistanceNSafe*NumVerticalDistanceNSafe*NumHitByBullet);
+		 int remain = index % (NumTargetDistance*NumTargetBearing*NumHorizontalDistanceNSafe*NumVerticalDistanceNSafe*NumHitByBullet);
+		 int targetDistances = remain/(NumTargetBearing*NumHorizontalDistanceNSafe*NumVerticalDistanceNSafe*NumHitByBullet);
+		 remain = remain % (NumTargetBearing*NumHorizontalDistanceNSafe*NumVerticalDistanceNSafe*NumHitByBullet);
+		 int targetBearing = remain/(NumHorizontalDistanceNSafe*NumVerticalDistanceNSafe*NumHitByBullet);
+		 remain = remain % (NumHorizontalDistanceNSafe*NumVerticalDistanceNSafe*NumHitByBullet);
+		 int horizontalUnsafe = remain/(NumVerticalDistanceNSafe*NumHitByBullet);
+		 remain = remain % (NumVerticalDistanceNSafe*NumHitByBullet);
+		 int verticalUnsafe = remain/(NumHitByBullet);
+		 int hitByBullet = remain % (NumHitByBullet);		 
+		 int[] states = new int[6];		 
+		 states[0]=heading;
+		 states[1]=targetDistances;
+		 states[2]=targetBearing;
+		 states[3]=horizontalUnsafe;
+		 states[4]=verticalUnsafe;
+		 states[5]=hitByBullet;
+		 
+		 return states;
+	 }
 	  
 }

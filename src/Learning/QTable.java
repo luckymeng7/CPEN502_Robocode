@@ -42,6 +42,10 @@ public class QTable {
 		return maxQ;
 	}
 	
+	public double [] [] getTable(){
+		return table;
+	}
+	
 	/*
 	 * Return the action that has the max Q value
 	 */
