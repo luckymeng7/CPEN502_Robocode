@@ -279,12 +279,12 @@ public class NeuralNet implements NeuralNetInterface {
 		printWriter.flush();
 		printWriter.close();
 	}
+	
 	@Override
 	public void save(File argFile) {
-		// TODO Auto-generated method stub
 		PrintStream savefile = null;
 		try{
-			savefile = new PrintStream(new FileOutputStream(argFile, false) );
+			savefile = new PrintStream(new FileOutputStream(argFile) );
 			savefile.println(outputLayerNeurons.size());
 			savefile.println(hiddenLayerNeurons.size());
 			savefile.println(inputLayerNeurons.size());
@@ -310,8 +310,8 @@ public class NeuralNet implements NeuralNetInterface {
 	}
 
 	@Override
-	public void load(String argFileName) throws IOException {
-		// TODO Auto-generated method stub
+	public void load(File argFileName) throws IOException {
+		
 		try{
 			BufferedReader readfile = new BufferedReader(new FileReader(argFileName));
 			int numOutputNeuron = Integer.valueOf(readfile.readLine());
@@ -353,6 +353,7 @@ public class NeuralNet implements NeuralNetInterface {
 		}
 		
 	}
+	
 	
 	public double sigmoidDerivative(double yi) {
 		double result = yi*(1 - yi);

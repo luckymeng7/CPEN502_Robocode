@@ -60,11 +60,20 @@ public class CrazyBanana extends AdvancedRobot {
 		execute();
 		
 
+		if (isOnline) {
+			try {
+				agent.initializeNeuralNetworks();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		//Get Last State
 		state = getState();
 		if(isSARSA && !isOnline) {		
 			turnRadarRightRadians(2*PI);
-			action = agent.selectAction(state);
+			action = agent.selectAction(state, isOnline);
 			while(true) {									
 				switch (action) {
 					case Action.RobotAhead:
@@ -100,7 +109,7 @@ public class CrazyBanana extends AdvancedRobot {
 				turnRadarRightRadians(2*PI);
 				//Update states
 				state = getState();
-				action = agent.selectAction(state);
+				action = agent.selectAction(state, isOnline);
 				agent.SARSALearn(state, action, reward);
 				accumuReward += reward;
 				
@@ -111,11 +120,11 @@ public class CrazyBanana extends AdvancedRobot {
 			}
 		}
 		else { 
-			// Q-Learning with Online  
+			// Q-Learning, or Online training
 			while(true) {
-				//state = getState();//Get Last State
+				agent.setCurrentStateArray(state);
 				turnRadarRightRadians(2*PI);					
-				action = agent.selectAction(state);					
+				action = agent.selectAction(state, isOnline);					
 				switch (action) {
 					case Action.RobotAhead:
 						setAhead(Action.RobotMoveDistance);
@@ -150,7 +159,11 @@ public class CrazyBanana extends AdvancedRobot {
 				turnRadarRightRadians(2*PI);
 				//Update states
 				state = getState();
-				agent.QLearn(state, action, reward);
+				if (isOnline) {
+					agent.onlineLearn(state, action, reward);
+				}else {
+					agent.QLearn(state, action, reward);
+				}				
 				accumuReward += reward;					
 				//Reset Values
 				reward = 0.0d;

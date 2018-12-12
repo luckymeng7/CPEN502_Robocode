@@ -68,11 +68,11 @@ public class LUTNerualNet {
 			}*/	
 		
 		for(int act = 6; act < Action.NumRobotActions; act++) {
-			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.2,10000,500);
+			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.2,10000,1);
 			System.out.println(act+"The average of number of epoches to converge is: "+average+"\n");
 		}
 		
-		/*for(NeuralNet net : neuralNetworks) {
+		for(NeuralNet net : neuralNetworks) {
 			try {
 					File weight = new File("Weight_"+net.getNetID()+".txt");
 					weight.createNewFile();
@@ -81,7 +81,7 @@ public class LUTNerualNet {
 				System.out.println(e);
 			}
 		}
-		*/
+		
 		
 		
 		System.out.println("Test ends here");
