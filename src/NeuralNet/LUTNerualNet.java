@@ -69,7 +69,7 @@ public class LUTNerualNet {
 			}*/	
 		
 		for(int act = 0; act < Action.NumRobotActions; act++) {
-			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.00001,10000,1);
+			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.000001,10000,1);
 			System.out.println(act+"The average of number of epoches to converge is: "+average+"\n");
 		}
 		

@@ -54,7 +54,7 @@ public class State {
 	}  
 	
 	public static int getTargetDistance(double value)  {  
-	    int distance = (int)(value / 30.0);  
+	    int distance = (int)(value / (1000/NumTargetDistance));  
 	    if (distance > NumTargetDistance - 1)  
 	      distance = NumTargetDistance - 1;  
 	    return distance;  

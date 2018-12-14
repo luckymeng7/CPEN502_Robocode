@@ -158,7 +158,7 @@ public class LearningAgent {
 		double expectedQ;
 		expectedQ = currentQ + learningRate*(reward + discountRate*newQ-currentQ);
 		
-		// Back Propagation
+		// Update the weight for chosen action's network
 		double []expectedOutput = new double[numOutput];
 		expectedOutput[0] = normalizeExpectedOutput(expectedQ, maxQ, minQ, upperBound, lowerBound);
 		neuralNetworks.get(action).train(normalizeInputData(currentStateArray), expectedOutput);
