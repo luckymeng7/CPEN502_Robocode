@@ -3,7 +3,7 @@ package Banana;
 import java.awt.Color;
 import java.io.IOException;
 import java.io.PrintStream;
-
+import java.util.Arrays;
 import robocode.*;
 
 import Learning.*;
@@ -33,13 +33,14 @@ public class CrazyBanana extends AdvancedRobot {
 	
 	private boolean interRewards = true;
 	private boolean isSARSA = true;
-	private boolean isOnline = false ;
-	
-	private int battleHistory100 [];
-	private double winningRate;
-	private double winningRate100 [];
-	private double winningRateVariant;
-	private int battleIndex = 0;
+	private boolean isOnline = true;
+
+	/*private int numSavedBattle = 100;
+	private int battleHistory[] = new int[numSavedBattle];
+	private int numSavedRate = 100;
+	private double winningRateArray [] = new double[numSavedRate];
+	private boolean isFirstGroupRound = true;
+	private boolean isFirstGroupRate = true;*/
 	
 	
 	/**
@@ -58,17 +59,16 @@ public class CrazyBanana extends AdvancedRobot {
 		setAdjustGunForRobotTurn(true); //Gun not Fix to body
 		setAdjustRadarForGunTurn(true); // Radar not Fix to boby
 		execute();
-		
 
 		if (isOnline) {
-			try {
-				agent.initializeNeuralNetworks();
-				for (NeuralNet net : agent.neuralNetworks) {
+			agent.initializeNeuralNetworks();
+			for (NeuralNet net : agent.neuralNetworks) {
+				try {
 					net.load(getDataFile("Weight_"+net.getNetID()+".dat"));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		}
 		
@@ -162,6 +162,7 @@ public class CrazyBanana extends AdvancedRobot {
 				turnRadarRightRadians(2*PI);
 				//Update states
 				state = getState();
+				agent.setNewStateArray(state);
 				if (isOnline) {
 					agent.onlineLearn(state, action, reward);
 				}else {
@@ -327,11 +328,20 @@ public class CrazyBanana extends AdvancedRobot {
 		//moveRobot();
 		saveData();   
   		int winningFlag=1;
+  		// Update the battle history
+  		/*if ( updateBattleHistory (1) < 0.1 && winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] > 0.8) {
+  	  		// Training Stopped
+  		} */
 
+  		for (NeuralNet net : agent.neuralNetworks) {
+			net.save(getDataFile("Weight_"+net.getNetID()+".dat"));
+		}
+  		
   		PrintStream w = null; 
   		try { 
   			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("battle_history.dat").getAbsolutePath(), true)); 
-  			w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate); 
+  			//w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate+" \t"+ winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] + " \t" + updateBattleHistory (1)); 
+  			w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate);
   			if (w.checkError()) 
   				System.out.println("Could not save the data!");  //setTurnLeft(180 - (target.bearing + 90 - 30));
   				w.close(); 
@@ -348,6 +358,8 @@ public class CrazyBanana extends AdvancedRobot {
 	    		System.out.println("Exception trying to close witer: " + e); 
 	    	}
 	    } 
+  		
+  		
     }   
      
 	/**
@@ -358,12 +370,23 @@ public class CrazyBanana extends AdvancedRobot {
     	reward+=rewardForDeath;
     	//moveRobot();
 		saveData();  
-       
+		// Update the battle history
+		/*if (updateBattleHistory (0) < 0.1 && winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] > 0.8) {
+			// Stop Train
+  	  		//out.println("winningRate: " + winningRate);
+  	  		//out.println("winningRateVariant: " + winningRateVariant);
+  		} */
+		
+		for (NeuralNet net : agent.neuralNetworks) {
+			net.save(getDataFile("Weight_"+net.getNetID()+".dat"));
+		}
+		
 		int losingFlag=0;
 		PrintStream w = null; 
 		try { 
 			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("battle_history.dat").getAbsolutePath(), true)); 
-			w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate); 
+			//w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate+" \t"+ winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] + " \t" + updateBattleHistory (0)); 
+			w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate);
 			if (w.checkError()) 
 				System.out.println("Could not save the data!"); 
 			w.close(); 
@@ -380,11 +403,12 @@ public class CrazyBanana extends AdvancedRobot {
 				System.out.println("Exception trying to close witer: " + e); 
 			} 
 		} 
+		
     }	    
     
     
     //======= Battle History and Variantion ===========
-    public void initializeBattleHistory () {
+/*    public void initializeBattleHistory () {
     	
     }
     
@@ -398,7 +422,7 @@ public class CrazyBanana extends AdvancedRobot {
     
     public void updateVariance (int index) {
     	
-    }
+    }*/
     
     
     //======= Load and Save the Look Up Table =========
@@ -419,4 +443,54 @@ public class CrazyBanana extends AdvancedRobot {
         out.println("Exception trying to write: " + e);   
       }   
     }   
+    
+    //======Online training performance====//
+    
+  /*  public double updateBattleHistory (int isWin) {
+    	double winningRate;
+    	double winningRateVariant = 100.0;
+    	// Update battleIndex
+    	if (getRoundNum() >= numSavedBattle) {
+  			isFirstGroupRound = false;
+  		}
+  		
+    	// Update rateIndex
+    	if (!isFirstGroupRound) {
+    		if (getRoundNum() >= numSavedRate + numSavedBattle) {
+      			isFirstGroupRate = false;
+      		}
+    	}
+    	
+    	// Update battle History and calculate variance
+		battleHistory[getRoundNum()%numSavedBattle] = isWin;
+  		if (!isFirstGroupRound) {
+			winningRate = ((double)Arrays.stream(battleHistory).sum())/numSavedBattle;
+			winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] = winningRate;
+  			if (!isFirstGroupRate) {
+  				winningRateVariant = stdev(winningRateArray);
+  			} 
+  		}
+  		return winningRateVariant;
+    }*/
+    
+
+    public static double stdev(double[] list){
+        double sum = 0.0;
+        double mean = 0.0;
+        double num = 0.0;
+        double numi = 0.0;
+        
+        for (double i : list) {
+            sum+=i;
+        }
+        mean = sum/list.length;
+
+        for (double i : list) {
+            numi = Math.pow( (i - mean), 2);
+            num+=numi;
+        }
+
+        return Math.sqrt(num/list.length);
+    }
+
 }

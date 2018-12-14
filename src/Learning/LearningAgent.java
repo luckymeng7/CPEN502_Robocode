@@ -32,9 +32,9 @@ public class LearningAgent {
 	}
 	
 	private int[] currentStateArray = new int [numStateCategory];
-	private int[]  newStateArray = new int [numStateCategory];
-	private double currentActionOutput [];
-	private double newActionOutput[];
+	private int[] newStateArray = new int [numStateCategory];
+	private double currentActionOutput [] = new double [Action.NumRobotActions];
+	private double newActionOutput[] = new double [Action.NumRobotActions];
 	
 	
 	public ArrayList<NeuralNet> neuralNetworks = new ArrayList<NeuralNet>();
@@ -89,7 +89,7 @@ public class LearningAgent {
 					currentActionOutput[net.getNetID()] = net.outputFor(normalizeInputData(currentStateArray))[0];
 				}
 				// Choose max output
-				double maxOutput = newStateArray[0];
+				double maxOutput = currentActionOutput[0];
 				int maxOutputIndex = 0;
 				for (int act = 0; act < Action.NumRobotActions ; act++) {
 					if (maxOutput < currentActionOutput[act]) {
@@ -128,15 +128,12 @@ public class LearningAgent {
 		double []inputData = new double [numStateCategory];
 		// Get current output 
 		inputData = normalizeInputData(currentStateArray);
-		for (NeuralNet net: neuralNetworks) {
+		/*for (NeuralNet net: neuralNetworks) {
 			currentActionOutput[net.getNetID()] = net.outputFor(inputData)[0];
-		}
+		}*/
 		// Map current output to current Q
 		double currentQ;
 		currentQ = remappingOutputToQ(currentActionOutput[action], maxQ, minQ, upperBound, lowerBound);
-		
-		// Get new input states
-		setNewStateArray(state);
 		
 		// Send input into 7 NeuralNet and get 7 output
 		inputData = normalizeInputData(newStateArray);
@@ -144,7 +141,7 @@ public class LearningAgent {
 			newActionOutput[net.getNetID()] = net.outputFor(inputData)[0];
 		}
 		// Choose max output
-		double maxOutput = newStateArray[0];
+		double maxOutput = newActionOutput[0];
 		double maxOutputIndex = 0;
 		for (int act = 0; act < Action.NumRobotActions ; act++) {
 			if (maxOutput < newActionOutput[act]) {
@@ -162,10 +159,9 @@ public class LearningAgent {
 		expectedQ = currentQ + learningRate*(reward + discountRate*newQ-currentQ);
 		
 		// Back Propagation
-		double []expectedOutput = null;
+		double []expectedOutput = new double[numOutput];
 		expectedOutput[0] = normalizeExpectedOutput(expectedQ, maxQ, minQ, upperBound, lowerBound);
 		neuralNetworks.get(action).train(normalizeInputData(currentStateArray), expectedOutput);
-		
 	}
 	
 	public void setCurrentStateArray (int state) {
@@ -175,10 +171,9 @@ public class LearningAgent {
 		newStateArray = State.getStateFromIndex(state);
 	}
 	
-	public void initializeNeuralNetworks () throws IOException {
+	public void initializeNeuralNetworks () {
 		for (int act = 0; act < Action.NumRobotActions; act++) {
-			NeuralNet testNeuronNet = null;
-			testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act);
+			NeuralNet testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act);
 			neuralNetworks.add(testNeuronNet);
 		}
 	}
@@ -231,5 +226,6 @@ public class LearningAgent {
 		remappedQ = min + (output-lowerbound)*(max-min)/(upperbound - lowerbound);		
 		return remappedQ;
 	}
+	
 	
 }
