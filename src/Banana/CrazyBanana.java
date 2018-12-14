@@ -7,8 +7,8 @@ import java.io.PrintStream;
 import robocode.*;
 
 import Learning.*;
-
 // API help : http://robocode.sourceforge.net/docs/robocode/robocode/Robot.html
+import NeuralNet.NeuralNet;
 
 /**
  * CrazyBanana - a robot by xmli01
@@ -33,7 +33,7 @@ public class CrazyBanana extends AdvancedRobot {
 	
 	private boolean interRewards = true;
 	private boolean isSARSA = true;
-	private boolean isOnline = true;
+	private boolean isOnline = false ;
 	
 	private int battleHistory100 [];
 	private double winningRate;
@@ -63,6 +63,9 @@ public class CrazyBanana extends AdvancedRobot {
 		if (isOnline) {
 			try {
 				agent.initializeNeuralNetworks();
+				for (NeuralNet net : agent.neuralNetworks) {
+					net.load(getDataFile("Weight_"+net.getNetID()+".dat"));
+				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

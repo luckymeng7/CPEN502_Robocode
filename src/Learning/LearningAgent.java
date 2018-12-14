@@ -37,7 +37,7 @@ public class LearningAgent {
 	private double newActionOutput[];
 	
 	
-	private static ArrayList<NeuralNet> neuralNetworks = new ArrayList<NeuralNet>();
+	public ArrayList<NeuralNet> neuralNetworks = new ArrayList<NeuralNet>();
 	
 	// Off-policy
 	public void QLearn (int nextState, int nextAction, double reward) {
@@ -115,7 +115,7 @@ public class LearningAgent {
 	// Choose the max action
 
 	// Execute action
-	// Get new state
+	// Get new state 
 	// Send into 7 NN
 	// Get 7 output
 	// Choose max OUTPUT (new)
@@ -177,10 +177,8 @@ public class LearningAgent {
 	
 	public void initializeNeuralNetworks () throws IOException {
 		for (int act = 0; act < Action.NumRobotActions; act++) {
-			File file = new File ("Weight_"+act+".txt");
 			NeuralNet testNeuronNet = null;
 			testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act);
-			testNeuronNet.load(file);
 			neuralNetworks.add(testNeuronNet);
 		}
 	}

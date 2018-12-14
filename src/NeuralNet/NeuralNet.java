@@ -5,6 +5,8 @@ import java.util.Random;
 import java.io.*;
 import Interface.NeuralNetInterface;
 
+import robocode.RobocodeFileOutputStream;
+
 public class NeuralNet implements NeuralNetInterface {
 	
 	private int netID;
@@ -284,7 +286,7 @@ public class NeuralNet implements NeuralNetInterface {
 	public void save(File argFile) {
 		PrintStream savefile = null;
 		try{
-			savefile = new PrintStream(new FileOutputStream(argFile) );
+			savefile = new PrintStream(new RobocodeFileOutputStream(argFile) );
 			savefile.println(outputLayerNeurons.size());
 			savefile.println(hiddenLayerNeurons.size());
 			savefile.println(inputLayerNeurons.size());
@@ -300,11 +302,14 @@ public class NeuralNet implements NeuralNetInterface {
 					savefile.println(link.getWeight());
 				}
 			}
-			savefile.flush();
-			savefile.close();				
+			savefile.flush();			
 		}
 		catch(IOException e){
 			System.out.println("Cannot save the weight table.");
+		} finally {
+			if (savefile != null) {
+				savefile.close();
+			}
 		}
 
 	}
