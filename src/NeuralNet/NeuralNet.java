@@ -31,11 +31,13 @@ public class NeuralNet implements NeuralNetInterface {
 	private ArrayList<Double> errorInEachEpoch = new ArrayList<>();
 	private ArrayList<Integer> epochEachTrail = new ArrayList<>();
 	
+	private boolean isOnline;
+	
 	public NeuralNet(
 					int numInputs, int numHiddens, 
 					int numOutputs, double learningRate, 
 					double momentumRate, double a, double b,
-					int id
+					int id, boolean isOnline
 					) {
 		this.argNumInputs = numInputs;
 		this.argNumHiddens = numHiddens;
@@ -49,6 +51,7 @@ public class NeuralNet implements NeuralNetInterface {
 		this.setUpNetwork();
 		this.initializeWeights();
 		this.netID = id;
+		this.isOnline = isOnline;
 	}
 	
 	public void setUpNetwork() {
@@ -286,7 +289,12 @@ public class NeuralNet implements NeuralNetInterface {
 	public void save(File argFile) {
 		PrintStream savefile = null;
 		try{
-			savefile = new PrintStream(new RobocodeFileOutputStream(argFile) );
+			if (isOnline) {
+				savefile = new PrintStream(new RobocodeFileOutputStream(argFile) );
+			} else {
+				savefile = new PrintStream(new FileOutputStream(argFile) );
+			}
+			
 			savefile.println(outputLayerNeurons.size());
 			savefile.println(hiddenLayerNeurons.size());
 			savefile.println(inputLayerNeurons.size());

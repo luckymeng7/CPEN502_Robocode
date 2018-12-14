@@ -18,7 +18,7 @@ public class LearningAgent {
 	/***Test Data*****/	
 	private static int numStateCategory = 6;
 	private static int numInput = numStateCategory;
-	private static int numHidden = 40;
+	private static int numHidden = 20;
 	private static int numOutput = 1;	
 	private static double learningRate = 0.005; // alpha
 	private static double momentumRate = 0.9;
@@ -173,7 +173,7 @@ public class LearningAgent {
 	
 	public void initializeNeuralNetworks () {
 		for (int act = 0; act < Action.NumRobotActions; act++) {
-			NeuralNet testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act);
+			NeuralNet testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act, true);
 			neuralNetworks.add(testNeuronNet);
 		}
 	}

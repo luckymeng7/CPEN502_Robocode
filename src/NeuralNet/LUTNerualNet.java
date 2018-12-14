@@ -15,7 +15,7 @@ public class LUTNerualNet {
 	/***Test Data*****/	
 	private static int numStateCategory = 6;
 	private static int numInput = numStateCategory;
-	private static int numHidden = 40;
+	private static int numHidden = 20;
 	private static int numOutput = 1;	
 	private static double expectedOutput[][]; //numStates*numActions
 	private static double learningRate = 0.005;
@@ -24,10 +24,11 @@ public class LUTNerualNet {
 	private static double upperBound = 1.0;
 	private static double maxQ = 120;
 	private static double minQ = -20;
-	
+	private static double rms[] = {0.115, 0.115, 0.1, 0.1, 0.1, 0.1, 0.2};
 
 	private static ArrayList<Double> errorInEachEpoch;
 	private static ArrayList<NeuralNet> neuralNetworks;
+	private static boolean isOnline = false;
 
 	
 	Neuron testNeuron = new Neuron("test");
@@ -68,7 +69,7 @@ public class LUTNerualNet {
 			}*/	
 		
 		for(int act = 0; act < Action.NumRobotActions; act++) {
-			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.115,10000,2);
+			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.00001,10000,1);
 			System.out.println(act+"The average of number of epoches to converge is: "+average+"\n");
 		}
 		
@@ -158,7 +159,7 @@ public class LUTNerualNet {
 		success = 0;
 		NeuralNet testNeuronNet = null;
 		for(int i = 0; i < numTrials; i++) {
-			testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act); //Construct a new neural net object
+			testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act,isOnline ); //Construct a new neural net object
 			tryConverge(testNeuronNet,input,expected,maxSteps, minError);//Train the network with step and error constrains
 			epochNumber = getErrorArray().size(); //get the epoch number of this trial.
 			if( epochNumber < maxSteps) {
@@ -183,8 +184,10 @@ public class LUTNerualNet {
 	public static void tryConverge(NeuralNet theNet, double[][] input, double [][] expected,int maxStep, double minError) {
 		int i;
 		double totalerror = 1;
+		double previousError = 0; 
 		errorInEachEpoch = new ArrayList<>();
-		for(i = 0; i < maxStep && totalerror > minError; i++) {
+		for(i = 0; i < maxStep && Math.abs(totalerror-previousError) > minError; i++) {
+			previousError = totalerror;
 			totalerror = 0.0;
 			for(int j = 0; j < input.length; j++) {
 				totalerror += theNet.train(input[j],expected[j]);				
@@ -192,6 +195,8 @@ public class LUTNerualNet {
 			//totalerror = totalerror*0.5;
 			totalerror = Math.sqrt(totalerror/input.length);
 			errorInEachEpoch.add(totalerror);
+			//System.out.println("totalerror: " + totalerror);
+			//System.out.println("previousError: " + previousError);
 		}
 		System.out.println("Sum of squared error in last epoch = " + totalerror);
 		System.out.println("Number of epoch: "+ i + "\n");

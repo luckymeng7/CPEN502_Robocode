@@ -3,7 +3,6 @@ package Banana;
 import java.awt.Color;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Arrays;
 import robocode.*;
 
 import Learning.*;
@@ -49,7 +48,9 @@ public class CrazyBanana extends AdvancedRobot {
 	public void run() {
 		// Initialization of the RL
 		table = new QTable();  
-		loadData();
+		if (!isOnline) {
+			loadData();			
+		}
         agent = new LearningAgent(table);   
         target = new Target();   
         target.distance = 100000;
@@ -326,7 +327,9 @@ public class CrazyBanana extends AdvancedRobot {
     {   
 		reward+=rewardForWin;
 		//moveRobot();
-		saveData();   
+		if (!isOnline) {
+			saveData(); 
+		}		  
   		int winningFlag=1;
   		// Update the battle history
   		/*if ( updateBattleHistory (1) < 0.1 && winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] > 0.8) {
@@ -369,7 +372,9 @@ public class CrazyBanana extends AdvancedRobot {
     {   
     	reward+=rewardForDeath;
     	//moveRobot();
-		saveData();  
+    	if (!isOnline) {
+			saveData(); 
+		} 
 		// Update the battle history
 		/*if (updateBattleHistory (0) < 0.1 && winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] > 0.8) {
 			// Stop Train
