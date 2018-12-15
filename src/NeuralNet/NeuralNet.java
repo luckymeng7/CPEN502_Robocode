@@ -31,13 +31,11 @@ public class NeuralNet implements NeuralNetInterface {
 	private ArrayList<Double> errorInEachEpoch = new ArrayList<>();
 	private ArrayList<Integer> epochEachTrail = new ArrayList<>();
 	
-	private boolean isOnline;
-	
 	public NeuralNet(
 					int numInputs, int numHiddens, 
 					int numOutputs, double learningRate, 
 					double momentumRate, double a, double b,
-					int id, boolean isOnline
+					int id
 					) {
 		this.argNumInputs = numInputs;
 		this.argNumHiddens = numHiddens;
@@ -51,7 +49,6 @@ public class NeuralNet implements NeuralNetInterface {
 		this.setUpNetwork();
 		this.initializeWeights();
 		this.netID = id;
-		this.isOnline = isOnline;
 	}
 	
 	public void setUpNetwork() {
@@ -289,12 +286,7 @@ public class NeuralNet implements NeuralNetInterface {
 	public void save(File argFile) {
 		PrintStream savefile = null;
 		try{
-			if (isOnline) {
-				savefile = new PrintStream(new RobocodeFileOutputStream(argFile) );
-			} else {
-				savefile = new PrintStream(new FileOutputStream(argFile) );
-			}
-			
+			savefile = new PrintStream(new FileOutputStream(argFile,false) );
 			savefile.println(outputLayerNeurons.size());
 			savefile.println(hiddenLayerNeurons.size());
 			savefile.println(inputLayerNeurons.size());
@@ -310,14 +302,39 @@ public class NeuralNet implements NeuralNetInterface {
 					savefile.println(link.getWeight());
 				}
 			}
-			savefile.flush();			
+			savefile.flush();
+			savefile.close();				
 		}
 		catch(IOException e){
 			System.out.println("Cannot save the weight table.");
-		} finally {
-			if (savefile != null) {
-				savefile.close();
+		}
+
+	}
+	
+	public void save_robot(File argFile) {
+		PrintStream savefile = null;
+		try{
+			savefile = new PrintStream(new RobocodeFileOutputStream(argFile));
+			savefile.println(outputLayerNeurons.size());
+			savefile.println(hiddenLayerNeurons.size());
+			savefile.println(inputLayerNeurons.size());
+			for(Neuron output : outputLayerNeurons){
+				ArrayList<NeuronConnection> connections = output.getInputConnectionList();
+				for(NeuronConnection link : connections){
+					savefile.println(link.getWeight());
+				}
 			}
+			for(Neuron hidden: hiddenLayerNeurons) {
+				ArrayList<NeuronConnection> connections = hidden.getInputConnectionList();
+				for(NeuronConnection link : connections){
+					savefile.println(link.getWeight());
+				}
+			}
+			savefile.flush();
+			savefile.close();				
+		}
+		catch(IOException e){
+			System.out.println("Cannot save the weight table.");
 		}
 
 	}

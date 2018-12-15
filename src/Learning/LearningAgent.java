@@ -1,15 +1,15 @@
 package Learning;
 import java.util.ArrayList;
 import java.util.Random;
-import java.io.File;
-import java.io.IOException;
+//import java.io.File;
+//import java.io.IOException;
 
 import NeuralNet.*;
 
 public class LearningAgent {
 
 	public static final double discountRate = 0.9;   // gamma
-	public static double explorationRate = 0.2;   
+	public static double explorationRate = 0.3;   
 	private int currentState;   
 	private int currentAction;   
 	private boolean firstRound = true;   
@@ -18,27 +18,34 @@ public class LearningAgent {
 	/***Test Data*****/	
 	private static int numStateCategory = 6;
 	private static int numInput = numStateCategory;
-	private static int numHidden = 20;
-	private static int numOutput = 1;	
-	private static double learningRate = 0.005; // alpha
-	private static double momentumRate = 0.9;
+	private static int numHidden = LUTNeuralNet.getNumHidden();
+	private static int numOutput = LUTNeuralNet.getNumoutput();	
+	private static double learningRate_NN = LUTNeuralNet.getLearningRate(); // alpha
+	private static double learningRate = 0.2; // alpha
+	private static double momentumRate = LUTNeuralNet.getMomentumRate();
 	private static double lowerBound = -1.0;
 	private static double upperBound = 1.0;
-	private static double maxQ = 120;
-	private static double minQ = -20;
-
-	public LearningAgent (QTable table) {
-		this.table = table;
-	}
+	
+	private double []maxQ = new double[Action.NumRobotActions];
+	private double []minQ = new double[Action.NumRobotActions];
+	
 	
 	private int[] currentStateArray = new int [numStateCategory];
 	private int[] newStateArray = new int [numStateCategory];
-	private double currentActionOutput [] = new double [Action.NumRobotActions];
-	private double newActionOutput[] = new double [Action.NumRobotActions];
+	private double [] currentActionOutput  = new double [Action.NumRobotActions];
+	private double [] newActionOutput = new double[Action.NumRobotActions];
+	private double [] currentActionQ  = new double[Action.NumRobotActions];
+	private double [] newActionQ = new double[Action.NumRobotActions];
 	
-	
-	public ArrayList<NeuralNet> neuralNetworks = new ArrayList<NeuralNet>();
-	
+	private ArrayList<NeuralNet> neuralNetworks = new ArrayList<NeuralNet>();
+	public LearningAgent (QTable table) {
+		this.table = table;
+		for (int act = 0; act<Action.NumRobotActions; act++) {
+			maxQ[act] = 120;
+			minQ[act] = -20;
+		}
+	}
+		
 	// Off-policy
 	public void QLearn (int nextState, int nextAction, double reward) {
 		double oldQ;
@@ -76,7 +83,7 @@ public class LearningAgent {
 	public int selectAction(int state, boolean isOnline) {
 		double thres = Math.random();
 		int action = 0;
-		
+		double [] inputData = normalizeInputData(currentStateArray);
 		if (thres < explorationRate) {
 			// take exploration move
 			Random ran = new Random();
@@ -85,19 +92,15 @@ public class LearningAgent {
 			// take greedy move
 			if (isOnline) {
 				// Send input into 7 NeuralNet and get 7 output
-				for (NeuralNet net: neuralNetworks) {
-					currentActionOutput[net.getNetID()] = net.outputFor(normalizeInputData(currentStateArray))[0];
+				for(NeuralNet theNet : neuralNetworks) {
+					int act = theNet.getNetID();
+					double currentNetOutput = theNet.outputFor(inputData)[0];
+					double currentNetQValue = LUTNeuralNet.inverseMappingOutput(currentNetOutput, maxQ[act], minQ[act], upperBound, lowerBound);//Reverse map output to big scale
+					int currentNetIndex = theNet.getNetID();
+					setCurrentActionValue(currentNetOutput,currentNetIndex);//Probably wrong
+					setCurrentQValue(currentNetQValue,currentNetIndex);
 				}
-				// Choose max output
-				double maxOutput = currentActionOutput[0];
-				int maxOutputIndex = 0;
-				for (int act = 0; act < Action.NumRobotActions ; act++) {
-					if (maxOutput < currentActionOutput[act]) {
-						maxOutput = currentActionOutput[act];
-						maxOutputIndex = act;
-					}
-				}
-				action = maxOutputIndex;
+				action = getMaxIndex(currentActionQ);
 			} else {
 				action = table.getBestAction(state);
 			}
@@ -122,45 +125,62 @@ public class LearningAgent {
 	// Remap max OUTPUT to Q -> Q'
 	// Calculate the expected Q
 	// Use expected Q to do backpropogation 
-	
+	public void nn_QLearn( int action, double reward) {
+		//Need to make currentData Array and new Data array is set before calling this function
+		double currentStateQValue = getCurrentQValues()[action] ;
+		double [] newInputData = new double[numStateCategory];
+		newInputData = LUTNeuralNet.normalizeInputData(getNewStateArray());
+		for(NeuralNet theNet: neuralNetworks) {
+			int act = theNet.getNetID();
+			double tempOutput = theNet.outputFor(newInputData)[0];
+			double tempQValue = LUTNeuralNet.inverseMappingOutput(tempOutput, maxQ[act], minQ[act], upperBound, lowerBound);
+			setNewActionValue(tempOutput,theNet.getNetID());
+			setNewQValue(tempQValue,theNet.getNetID());
+		}//Update the NewActionValue and newQValues Arrays
+		
+		int maxNewStateActionIndex = getMaxIndex(getNewActionValues());
+		double maxNewQValue = getNewQValues()[maxNewStateActionIndex];
+		double expectedQValue = currentStateQValue + learningRate*(reward + discountRate *maxNewQValue -currentStateQValue); 
+		double [] expectedOutput = new double[1];
+		expectedOutput[0] = LUTNeuralNet.normalizeExpectedOutput(expectedQValue, maxQ[action], minQ[action], upperBound, lowerBound);
+		NeuralNet learningNet = neuralNetworks.get(action);
+		double [] currentInputData = LUTNeuralNet.normalizeInputData(getNewStateArray());
+		learningNet.train(currentInputData, expectedOutput);
+	}
 
-	public void onlineLearn (int state, int action, double reward) {
+	public void onlineLearn (int action, double reward) {
 		double []inputData = new double [numStateCategory];
-		// Get current output 
-		inputData = normalizeInputData(currentStateArray);
-		/*for (NeuralNet net: neuralNetworks) {
+		// Get current output , duplicated steps from select action
+		/*inputData = normalizeInputData(currentStateArray);
+		for (NeuralNet net: neuralNetworks) {
 			currentActionOutput[net.getNetID()] = net.outputFor(inputData)[0];
 		}*/
 		// Map current output to current Q
-		double currentQ;
-		currentQ = remappingOutputToQ(currentActionOutput[action], maxQ, minQ, upperBound, lowerBound);
+		double currentQ = currentActionQ[action];
 		
 		// Send input into 7 NeuralNet and get 7 output
 		inputData = normalizeInputData(newStateArray);
 		for (NeuralNet net: neuralNetworks) {
 			newActionOutput[net.getNetID()] = net.outputFor(inputData)[0];
+			newActionQ[net.getNetID()] = remappingOutputToQ(newActionOutput[net.getNetID()], maxQ[net.getNetID()], minQ[net.getNetID()], upperBound, lowerBound);
 		}
-		// Choose max output
-		double maxOutput = newActionOutput[0];
-		double maxOutputIndex = 0;
+		// Choose max new output
+		double maxNewQ = newActionQ[0];
+		//int maxOutputIndex = 0;
 		for (int act = 0; act < Action.NumRobotActions ; act++) {
-			if (maxOutput < newActionOutput[act]) {
-				maxOutput = newActionOutput[act];
-				maxOutputIndex = act;
+			if (maxNewQ < newActionQ[act]) {
+				maxNewQ = newActionQ[act];
+				//maxOutputIndex = act;
 			}
-		}
-		
-		// Remap max Output to Q
-		double newQ;
-		newQ = remappingOutputToQ(maxOutput, maxQ, minQ, upperBound, lowerBound);
+		}		
 		
 		// Expected Q
 		double expectedQ;
-		expectedQ = currentQ + learningRate*(reward + discountRate*newQ-currentQ);
+		expectedQ = currentQ + learningRate*(reward + discountRate*maxNewQ-currentQ);
 		
 		// Update the weight for chosen action's network
 		double []expectedOutput = new double[numOutput];
-		expectedOutput[0] = normalizeExpectedOutput(expectedQ, maxQ, minQ, upperBound, lowerBound);
+		expectedOutput[0] = normalizeExpectedOutput(expectedQ, maxQ[action], minQ[action], upperBound, lowerBound);
 		neuralNetworks.get(action).train(normalizeInputData(currentStateArray), expectedOutput);
 	}
 	
@@ -171,10 +191,10 @@ public class LearningAgent {
 		newStateArray = State.getStateFromIndex(state);
 	}
 	
-	public void initializeNeuralNetworks () {
-		for (int act = 0; act < Action.NumRobotActions; act++) {
-			NeuralNet testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act, true);
-			neuralNetworks.add(testNeuronNet);
+	public void initializeNeuralNetworks(){
+		for(int i = 0; i < Action.NumRobotActions; i++) {
+			NeuralNet theNewNet = new NeuralNet(numInput,numHidden,numOutput,learningRate_NN,momentumRate,lowerBound,upperBound,i);
+			neuralNetworks.add(theNewNet);
 		}
 	}
 	
@@ -209,23 +229,123 @@ public class LearningAgent {
 	
 	public static double normalizeExpectedOutput(double expected, double max, double min, double upperbound, double lowerbound){
 		double normalizedExpected = 0.0;
-		if(expected > max) {
-			expected = max;
-		}else if(expected < min) {
-			expected = min;
+		double localExpected = expected;
+		if(localExpected > max) {
+			localExpected = max;
+		}else if(localExpected < min) {
+			localExpected = min;
 		}
 		
-			normalizedExpected = lowerbound +(expected-min)*(upperbound-lowerbound)/(max - min);
+			normalizedExpected = lowerbound +(localExpected-min)*(upperbound-lowerbound)/(max - min);
 		
 		
 		return normalizedExpected;
 	}
 	
-	public static double  remappingOutputToQ (double output, double max, double min, double upperbound, double lowerbound) {
+	public static double  remappingOutputToQ (double output, double maxQ, double minQ, double upperbound, double lowerbound) {
 		double remappedQ = 0.0;
-		remappedQ = min + (output-lowerbound)*(max-min)/(upperbound - lowerbound);		
+		double currentOutput = output;
+		if(currentOutput < -1.0) {
+			currentOutput = -1.0;
+		}else if(currentOutput > 1.0) {
+			currentOutput = 1.0;
+		}
+		remappedQ = minQ + (currentOutput-lowerbound)/(upperbound-lowerbound)*(maxQ - minQ);		
 		return remappedQ;
 	}
 	
+	public static double[] getColumn(double[][] array, int index) {
+		double[] column = new double[State.NumStates];
+		for(int i = 0; i< column.length; i++ ) {
+			column[i] = array[i][index];
+		}
+		return column;
+	}
 	
+	public static double findMax (double []theValues) {
+		double maxQValue = theValues[0];
+		int maxIndex = 0;
+		for (int i = 0; i < theValues.length; i++) {
+			if(maxQValue < theValues[i]) {
+				maxQValue = theValues[i];
+				maxIndex = i;
+			}
+		}
+		return maxQValue;
+	}
+	
+	public static double findMin (double []theValues) {
+		double minQValue = theValues[0];
+		int minIndex = 0;
+		for (int i = 0; i < theValues.length; i++) {
+			if(minQValue > theValues[i]) {
+				minQValue = theValues[i];
+				minIndex = i;
+			}
+		}
+		return minQValue;
+	}
+	
+	public int getMaxIndex(double [] theValues) {
+		double maxQValue = theValues[0];
+		int maxIndex = 0;
+		for(int i = 0; i < theValues.length; i++) {
+			if(maxQValue < theValues[i]) {
+				maxQValue = theValues[i];
+				maxIndex = i;
+			}
+		}
+		return maxIndex;
+	} 
+	
+	public void setCurrentActionValue(double theValues, int theIndex) {
+		currentActionOutput[theIndex] = theValues;
+	}
+	public double [] getCurrentActionValues() {
+		return this.currentActionOutput;
+	}
+	
+	public void setCurrentQValues(double [] theValues) {
+		currentActionQ = theValues;
+	}
+	public void setCurrentQValue(double theValues, int theIndex) {
+		currentActionQ[theIndex] = theValues;
+	}
+	
+	public double [] getCurrentQValues() {
+		return this.currentActionQ;
+	}
+
+	public void setNewQValues(double [] theValues) {
+		newActionQ = theValues;
+	}
+	public void setNewQValue(double theValues, int theIndex) {
+		newActionQ[theIndex] = theValues;
+	}
+	public double [] getNewQValues() {
+		return this.newActionQ;
+	}
+	
+	public int [] getNewStateArray(){
+		return this.newStateArray;
+	}
+	
+	public void setCurrentActionValues(double [] theValues) {
+		currentActionOutput = theValues;
+	}
+
+	
+	public void setNewActionValues(double [] theValues) {
+		newActionOutput = theValues;
+	}
+	public void setNewActionValue(double theValues, int theIndex) {
+		newActionOutput[theIndex] = theValues;
+	}
+	public double [] getNewActionValues() {
+		return this.newActionOutput;
+	}
+	public ArrayList<NeuralNet> getNeuralNetworks(){
+		return this.neuralNetworks;
+	}
+
 }

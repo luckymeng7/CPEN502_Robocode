@@ -3,6 +3,8 @@ package Banana;
 import java.awt.Color;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
+
 import robocode.*;
 
 import Learning.*;
@@ -31,84 +33,139 @@ public class CrazyBanana extends AdvancedRobot {
 	private double accumuReward=0.0;
 	
 	private boolean interRewards = true;
-	private boolean isSARSA = true;
+	private boolean isSARSA = false;
 	private boolean isOnline = true;
-
-	/*private int numSavedBattle = 100;
-	private int battleHistory[] = new int[numSavedBattle];
-	private int numSavedRate = 100;
-	private double winningRateArray [] = new double[numSavedRate];
-	private boolean isFirstGroupRound = true;
-	private boolean isFirstGroupRate = true;*/
+	private boolean isNaive = false;
 	
+	ArrayList<NeuralNet> templist = new ArrayList<NeuralNet>();
 	
 	/**
 	 * run: CrazyBanana's default behavior
 	 */   
 	public void run() {
 		// Initialization of the RL
-		table = new QTable();  
-		if (!isOnline) {
-			loadData();			
-		}
+		table = new QTable(); 
         agent = new LearningAgent(table);   
         target = new Target();   
         target.distance = 100000;
+       
 
 		// Initialization of the robot
 		setAllColors(Color.red);
 		setAdjustGunForRobotTurn(true); //Gun not Fix to body
 		setAdjustRadarForGunTurn(true); // Radar not Fix to boby
 		execute();
-
-		if (isOnline) {
-			agent.initializeNeuralNetworks();
-			for (NeuralNet net : agent.neuralNetworks) {
-				try {
-					net.load(getDataFile("Weight_"+net.getNetID()+".dat"));
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+        
+		 if(isOnline){
+				agent.initializeNeuralNetworks();
+				templist = agent.getNeuralNetworks();
+				if(isNaive) {
+					if(getRoundNum()>0) {
+						for(NeuralNet theNet: agent.getNeuralNetworks()) {
+							try {
+								theNet.load(getDataFile("Weight_"+theNet.getNetID()+".dat"));
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					}
 				}
-			}
-		}
-		
-		//Get Last State
-		state = getState();
-		if(isSARSA && !isOnline) {		
-			turnRadarRightRadians(2*PI);
-			action = agent.selectAction(state, isOnline);
-			while(true) {									
-				switch (action) {
-					case Action.RobotAhead:
-						setAhead(Action.RobotMoveDistance);
-						break;
-					case Action.RobotBack:
-						setBack(Action.RobotMoveDistance);
-						break;
-					case Action.RobotAheadTurnLeft:
-						setAhead(Action.RobotMoveDistance);
-						setTurnLeft(Action.RobotTurnDegree);
-						break;
-					case Action.RobotAheadTurnRight:
-						setAhead(Action.RobotMoveDistance);
-						setTurnRight(Action.RobotTurnDegree);
-						break;
-					case Action.RobotBackTurnLeft:
-						setBack(Action.RobotMoveDistance);
-						setTurnLeft(Action.RobotTurnDegree);
-						break;
-					case Action.RobotBackTurnRight:
-						setBack(Action.RobotMoveDistance);
-						setTurnRight(Action.RobotTurnDegree);
-						break;
-					case Action.RobotFire:
-						scanAndFire();
-						break;
-					default:
-						System.out.println("Wrong Action Order");
-						break;	
-				}					
+				else {
+					for(NeuralNet theNet: agent.getNeuralNetworks()) {
+						try {
+							theNet.load(getDataFile("Weight_"+theNet.getNetID()+".dat"));
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				
+				state = getState();//Get Initial State
+				while(true) {
+					turnRadarRightRadians(2*PI);
+					agent.setCurrentStateArray(state);
+					action = agent.selectAction(state, isOnline);
+					switch(action) {
+						case Action.RobotAhead:
+							setAhead(Action.RobotMoveDistance);
+							break;
+						case Action.RobotBack:
+							setBack(Action.RobotMoveDistance);
+							break;
+						case Action.RobotAheadTurnLeft:
+							setAhead(Action.RobotMoveDistance);
+							setTurnLeft(Action.RobotTurnDegree);
+							break;
+						case Action.RobotAheadTurnRight:
+							setAhead(Action.RobotMoveDistance);
+							setTurnRight(Action.RobotTurnDegree);
+							break;
+						case Action.RobotBackTurnLeft:
+							setBack(Action.RobotMoveDistance);
+							setTurnLeft(Action.RobotTurnDegree);
+							break;
+						case Action.RobotBackTurnRight:
+							setBack(Action.RobotMoveDistance);
+							setTurnRight(Action.RobotTurnDegree);
+							break;
+						case Action.RobotFire:
+							ahead(0);
+							turnLeft(0);
+							scanAndFire();
+							break;
+						default:
+							System.out.println("Action Not Found");
+							break;					
+					}	
+					execute();					
+					turnRadarRightRadians(2*PI);
+					//Update states
+					state = getState();
+					agent.setNewStateArray(state);
+					agent.nn_QLearn(action, reward);
+					accumuReward += reward;					
+					//Reset Values
+					reward = 0.0d;
+					isHitByBullet = 0;
+				}
+			} else if(isSARSA) {		
+				//Get Last State
+				state = getState();
+				turnRadarRightRadians(2*PI);
+				action = agent.selectAction(state, isOnline);
+				while(true) {									
+					switch(action) {
+						case Action.RobotAhead:
+							setAhead(Action.RobotMoveDistance);
+							break;
+						case Action.RobotBack:
+							setBack(Action.RobotMoveDistance);
+							break;
+						case Action.RobotAheadTurnLeft:
+							setAhead(Action.RobotMoveDistance);
+							setTurnLeft(Action.RobotTurnDegree);
+							break;
+						case Action.RobotAheadTurnRight:
+							setAhead(Action.RobotMoveDistance);
+							setTurnRight(Action.RobotTurnDegree);
+							break;
+						case Action.RobotBackTurnLeft:
+							setBack(Action.RobotMoveDistance);
+							setTurnLeft(Action.RobotTurnDegree);
+							break;
+						case Action.RobotBackTurnRight:
+							setBack(Action.RobotMoveDistance);
+							setTurnRight(Action.RobotTurnDegree);
+							break;
+						case Action.RobotFire:
+							ahead(0);
+							turnLeft(0);
+							scanAndFire();
+							break;
+						default:
+							System.out.println("Action Not Found");
+							break;					
+					}					
 				execute();					
 				turnRadarRightRadians(2*PI);
 				//Update states
@@ -119,17 +176,15 @@ public class CrazyBanana extends AdvancedRobot {
 				
 				//Reset Values
 				reward = 0.0d;
-				//isHitWall = 0;
 				isHitByBullet = 0;
 			}
-		}
-		else { 
-			// Q-Learning, or Online training
+		} else {
+			state = getState();//Get Last State
 			while(true) {
-				agent.setCurrentStateArray(state);
+				//state = getState();//Get Last State
 				turnRadarRightRadians(2*PI);					
-				action = agent.selectAction(state, isOnline);					
-				switch (action) {
+				action = agent.selectAction(state,isOnline);					
+				switch(action) {
 					case Action.RobotAhead:
 						setAhead(Action.RobotMoveDistance);
 						break;
@@ -153,35 +208,30 @@ public class CrazyBanana extends AdvancedRobot {
 						setTurnRight(Action.RobotTurnDegree);
 						break;
 					case Action.RobotFire:
+						ahead(0);
+						turnLeft(0);
 						scanAndFire();
 						break;
 					default:
-						System.out.println("Wrong Action Order");
-						break;	
-				}				
+						System.out.println("Action Not Found");
+						break;					
+				}	
 				execute();					
 				turnRadarRightRadians(2*PI);
 				//Update states
 				state = getState();
-				agent.setNewStateArray(state);
-				if (isOnline) {
-					agent.onlineLearn(state, action, reward);
-				}else {
-					agent.QLearn(state, action, reward);
-				}				
+				agent.QLearn(state, action, reward);
 				accumuReward += reward;					
 				//Reset Values
 				reward = 0.0d;
-				//isHitWall = 0;
 				isHitByBullet = 0;
 			}
-		}
-		
+		}		
 	}
+	
 	
 	////======= Internal Supportive Functions ========
 	private void scanAndFire() {
-		// TODO Auto-generated method stub
 		found = false;
 		while (!found) {
 			setTurnRadarLeft(360);
@@ -212,10 +262,10 @@ public class CrazyBanana extends AdvancedRobot {
 	 * Make sure bearing is within the -pi to pi range
 	 */
 	private double NormalizeBearing(double radarOffset) {
-		if (radarOffset > PI) {
+		while (radarOffset > PI) {
 			radarOffset -= 2*PI;
 		}
-		if (radarOffset < -PI) {
+		while (radarOffset < -PI) {
 			radarOffset += 2*PI;
 		}
 		return radarOffset;
@@ -326,19 +376,16 @@ public class CrazyBanana extends AdvancedRobot {
 	public void onWin(WinEvent event)   
     {   
 		reward+=rewardForWin;
-		//moveRobot();
+		templist = agent.getNeuralNetworks();
 		if (!isOnline) {
 			saveData(); 
-		}		  
-  		int winningFlag=1;
-  		// Update the battle history
-  		/*if ( updateBattleHistory (1) < 0.1 && winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] > 0.8) {
-  	  		// Training Stopped
-  		} */
-
-  		for (NeuralNet net : agent.neuralNetworks) {
-			net.save(getDataFile("Weight_"+net.getNetID()+".dat"));
+		}	
+		if (isOnline) {
+			for (NeuralNet net : agent.getNeuralNetworks()) {
+				net.save_robot(getDataFile("Weight_"+net.getNetID()+".dat"));
+			}
 		}
+  		int winningFlag=1;
   		
   		PrintStream w = null; 
   		try { 
@@ -371,21 +418,17 @@ public class CrazyBanana extends AdvancedRobot {
     public void onDeath(DeathEvent event)   
     {   
     	reward+=rewardForDeath;
-    	//moveRobot();
     	if (!isOnline) {
 			saveData(); 
 		} 
-		// Update the battle history
-		/*if (updateBattleHistory (0) < 0.1 && winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] > 0.8) {
-			// Stop Train
-  	  		//out.println("winningRate: " + winningRate);
-  	  		//out.println("winningRateVariant: " + winningRateVariant);
-  		} */
-		
-		for (NeuralNet net : agent.neuralNetworks) {
-			net.save(getDataFile("Weight_"+net.getNetID()+".dat"));
+    	
+    	templist = agent.getNeuralNetworks();
+    	if (isOnline) {
+			for (NeuralNet net : agent.getNeuralNetworks()) {
+				net.save_robot(getDataFile("Weight_"+net.getNetID()+".dat"));
+			}			
 		}
-		
+				
 		int losingFlag=0;
 		PrintStream w = null; 
 		try { 
@@ -412,24 +455,6 @@ public class CrazyBanana extends AdvancedRobot {
     }	    
     
     
-    //======= Battle History and Variantion ===========
-/*    public void initializeBattleHistory () {
-    	
-    }
-    
-    public void initializeVariance () {
-    	
-    }
-    
-    public void updateBattleHistory (int win, int index) {
-    	
-    }
-    
-    public void updateVariance (int index) {
-    	
-    }*/
-    
-    
     //======= Load and Save the Look Up Table =========
     public void loadData()   {   
       try   {   
@@ -448,35 +473,6 @@ public class CrazyBanana extends AdvancedRobot {
         out.println("Exception trying to write: " + e);   
       }   
     }   
-    
-    //======Online training performance====//
-    
-  /*  public double updateBattleHistory (int isWin) {
-    	double winningRate;
-    	double winningRateVariant = 100.0;
-    	// Update battleIndex
-    	if (getRoundNum() >= numSavedBattle) {
-  			isFirstGroupRound = false;
-  		}
-  		
-    	// Update rateIndex
-    	if (!isFirstGroupRound) {
-    		if (getRoundNum() >= numSavedRate + numSavedBattle) {
-      			isFirstGroupRate = false;
-      		}
-    	}
-    	
-    	// Update battle History and calculate variance
-		battleHistory[getRoundNum()%numSavedBattle] = isWin;
-  		if (!isFirstGroupRound) {
-			winningRate = ((double)Arrays.stream(battleHistory).sum())/numSavedBattle;
-			winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] = winningRate;
-  			if (!isFirstGroupRate) {
-  				winningRateVariant = stdev(winningRateArray);
-  			} 
-  		}
-  		return winningRateVariant;
-    }*/
     
 
     public static double stdev(double[] list){
