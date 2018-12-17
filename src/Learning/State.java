@@ -8,27 +8,11 @@ public class State {
 	public static final int NumHeading = 4;  
 	public static final int NumTargetDistance = 10;  
 	public static final int NumTargetBearing = 4;  
-	//public static final int NumHitWall = 2; 
 	public static final int NumHorizontalDistanceNSafe = 2; 
 	public static final int NumVerticalDistanceNSafe = 2; 
 	public static final int NumHitByBullet = 2;  
 	public static final int NumStates;  
 	public static final int Mapping[][][][][][];  
-
-	/*
-	static  {  
-		Mapping = new int[NumHeading][NumTargetDistance][NumTargetBearing][NumHitWall][NumHitByBullet];  
-		int count = 0;  
-		for (int a = 0; a < NumHeading; a++)  
-		  for (int b = 0; b < NumTargetDistance; b++)  
-		    for (int c = 0; c < NumTargetBearing; c++)  
-		      for (int d = 0; d < NumHitWall; d++)  
-		        for (int e = 0; e < NumHitByBullet; e++)  
-		      Mapping[a][b][c][d][e] = count++;  
-		  
-		NumStates = count;  
-	}  
-	 */
 	
 	static  {  
 		Mapping = new int[NumHeading][NumTargetDistance][NumTargetBearing][NumHorizontalDistanceNSafe][NumVerticalDistanceNSafe][NumHitByBullet];  

@@ -31,24 +31,15 @@ public class LUTNeuralNet {
 	
 	public static void main(String[] args){
 		QTable lut = new QTable();
-		//File file = new File("E:\\Work\\java\\RoboCode_RL_NN\\LUT.dat");
 		File file = new File("LUT.dat");
 		lut.loadData(file);
 		double inputData[][] = new double [State.NumStates][numStateCategory];
 		double normExpectedOutput[][][] = new double [Action.NumRobotActions][State.NumStates][numOutput];
 		expectedOutput = lut.getTable();
-		//System.out.println(Arrays.deepToString(expectedOutput));
-/*		int index = States.getStateIndex(2, 5, 3,1,1, 0);
-		int [] states = States.getStateFromIndex(index);
-		double [] normstates = normalizeInputData(states);
-		System.out.println(Arrays.toString(normstates));*/
-		//System.out.println(Double.toString(normalizeExpectedOutput(110,maxQ,minQ,upperBound,lowerBound)));
 
 		for(int act = 0; act<Action.NumRobotActions;act++) {
 			maxQ[act] = findMax(getColumn(expectedOutput,act));
 			minQ[act] = findMin(getColumn(expectedOutput,act));
-			//maxQ[act] = 120;
-			//minQ[act] = -20;
 		}
 		
 		for(int stateid = 0; stateid < State.NumStates; stateid++) {
@@ -59,18 +50,7 @@ public class LUTNeuralNet {
 			}
 		}
 		neuralNetworks = new ArrayList<NeuralNet>();
-/*		NeuralNet testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,6); //Construct a new neural net object
-		try {
-			tryConverge(testNeuronNet,inputData,normExpectedOutput[6],10000, 0.13);//Train the network with step and error constrains
-			testNeuronNet.printRunResults(errorInEachEpoch, "bipolarMomentum.csv");
-			//File file = new File("Weight_"+testNeuronNet.getNetID()+".txt");
-			//file.createNewFile();
-			//testNeuronNet.save(file);
-			}
-			catch(IOException e){
-				System.out.println(e);
-			}*/	
-		
+
 		for(int act = 0; act < Action.NumRobotActions; act++) {
 			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.000002,10000,1);
 			System.out.println(act+"The average of number of epoches to converge is: "+average+"\n");
@@ -199,11 +179,8 @@ public class LUTNeuralNet {
 			for(int j = 0; j < input.length; j++) {
 				totalerror += theNet.train(input[j],expected[j]);				
 			}
-			//totalerror = totalerror*0.5;
 			totalerror = Math.sqrt(totalerror/input.length);
 			errorInEachEpoch.add(totalerror);
-			//System.out.println("totalerror: " + totalerror);
-			//System.out.println("previousError: " + previousError);
 		}
 		System.out.println("Sum of squared error in last epoch = " + totalerror);
 		System.out.println("Number of epoch: "+ i + "\n");
@@ -235,11 +212,9 @@ public class LUTNeuralNet {
 
 	public static double findMax (double []theValues) {
 		double maxQValue = theValues[0];
-		int maxIndex = 0;
 		for (int i = 0; i < theValues.length; i++) {
 			if(maxQValue < theValues[i]) {
 				maxQValue = theValues[i];
-				maxIndex = i;
 			}
 		}
 		return maxQValue;
@@ -247,11 +222,9 @@ public class LUTNeuralNet {
 	
 	public static double findMin (double []theValues) {
 		double minQValue = theValues[0];
-		int minIndex = 0;
 		for (int i = 0; i < theValues.length; i++) {
 			if(minQValue > theValues[i]) {
 				minQValue = theValues[i];
-				minIndex = i;
 			}
 		}
 		return minQValue;

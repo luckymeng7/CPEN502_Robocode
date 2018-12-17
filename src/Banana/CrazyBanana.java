@@ -21,7 +21,6 @@ public class CrazyBanana extends AdvancedRobot {
 	private QTable table;   
 	private LearningAgent agent;   
 	private double reward = 0.0;   
-	//private int isHitWall = 0;   
 	private int isHitByBullet = 0;   
 	
 	private double oppoDist, oppoBearing;
@@ -51,7 +50,6 @@ public class CrazyBanana extends AdvancedRobot {
         agent = new LearningAgent(table);   
         target = new Target();   
         target.distance = 100000;
-       
 
 		// Initialization of the robot
 		setAllColors(Color.red);
@@ -261,8 +259,6 @@ public class CrazyBanana extends AdvancedRobot {
 		int targetBearing = State.getTargetBearing(target.bearing);   
 		int HorizontalNSafe = State.getHorizontalNSafe(getX(),getBattleFieldWidth());
 		int VerticalNSafe = State.getVerticalNSafe(getY(), getBattleFieldHeight());
-		//System.out.println("State(" + heading + ", " + targetDistance + ", " + targetBearing + ", " + isHitWall + ", " + isHitByBullet + ")");   
-		//int state = State.Mapping[heading][targetDistance][targetBearing][isHitWall][isHitByBullet]; 
 		int state = State.Mapping[heading][targetDistance][targetBearing][HorizontalNSafe][VerticalNSafe][isHitByBullet]; 
 		return state;  
 	}
@@ -400,7 +396,6 @@ public class CrazyBanana extends AdvancedRobot {
   		PrintStream w = null; 
   		try { 
   			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("battle_history.dat").getAbsolutePath(), true)); 
-  			//w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate+" \t"+ winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] + " \t" + updateBattleHistory (1)); 
   			w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate+" \t"+ chosenState + " \t" + chosenAction + " \t" + Math.abs(errorChosenToPrint));
   			if (w.checkError()) 
   				System.out.println("Could not save the data!");  //setTurnLeft(180 - (target.bearing + 90 - 30));
@@ -443,7 +438,6 @@ public class CrazyBanana extends AdvancedRobot {
 		PrintStream w = null; 
 		try { 
 			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("battle_history.dat").getAbsolutePath(), true)); 
-			//w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate+" \t"+ winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] + " \t" + updateBattleHistory (0)); 
 			w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate+" \t" + chosenState + " \t" + chosenAction + " \t" + Math.abs(errorChosenToPrint));
 			if (w.checkError()) 
 				System.out.println("Could not save the data!"); 

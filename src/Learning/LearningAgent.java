@@ -1,8 +1,6 @@
 package Learning;
 import java.util.ArrayList;
 import java.util.Random;
-//import java.io.File;
-//import java.io.IOException;
 
 import NeuralNet.*;
 
@@ -42,8 +40,6 @@ public class LearningAgent {
 	public LearningAgent (QTable table) {
 		this.table = table;
 		for (int act = 0; act<Action.NumRobotActions; act++) {
-			//maxQ[act] = findMax(getColumn(table.getTable(),act));
-			//minQ[act] = findMin(getColumn(table.getTable(),act));
 			maxQ[act] = 120;
 			minQ[act] = -20;
 		}
@@ -152,45 +148,6 @@ public class LearningAgent {
 			qError[state][action] = (getNewQValues()[action] - getCurrentQValues()[action])/getCurrentQValues()[action];
 		}
 		
-		//qError[state][action] = getNewQValues()[action] - getCurrentQValues()[action];
-		
-		
-	}
-
-	public void onlineLearn (int action, double reward) {
-		double []inputData = new double [numStateCategory];
-		// Get current output , duplicated steps from select action
-		/*inputData = normalizeInputData(currentStateArray);
-		for (NeuralNet net: neuralNetworks) {
-			currentActionOutput[net.getNetID()] = net.outputFor(inputData)[0];
-		}*/
-		// Map current output to current Q
-		double currentQ = currentActionQ[action];
-		
-		// Send input into 7 NeuralNet and get 7 output
-		inputData = normalizeInputData(newStateArray);
-		for (NeuralNet net: neuralNetworks) {
-			newActionOutput[net.getNetID()] = net.outputFor(inputData)[0];
-			newActionQ[net.getNetID()] = remappingOutputToQ(newActionOutput[net.getNetID()], maxQ[net.getNetID()], minQ[net.getNetID()], upperBound, lowerBound);
-		}
-		// Choose max new output
-		double maxNewQ = newActionQ[0];
-		//int maxOutputIndex = 0;
-		for (int act = 0; act < Action.NumRobotActions ; act++) {
-			if (maxNewQ < newActionQ[act]) {
-				maxNewQ = newActionQ[act];
-				//maxOutputIndex = act;
-			}
-		}		
-		
-		// Expected Q
-		double expectedQ;
-		expectedQ = currentQ + learningRate*(reward + discountRate*maxNewQ-currentQ);
-		
-		// Update the weight for chosen action's network
-		double []expectedOutput = new double[numOutput];
-		expectedOutput[0] = normalizeExpectedOutput(expectedQ, maxQ[action], minQ[action], upperBound, lowerBound);
-		neuralNetworks.get(action).train(normalizeInputData(currentStateArray), expectedOutput);
 	}
 	
 	public void setCurrentStateArray (int state) {
