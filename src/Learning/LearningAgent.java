@@ -19,7 +19,7 @@ public class LearningAgent {
 	private static int numStateCategory = 6;
 	private static int numInput = numStateCategory;
 	private static int numHidden = LUTNeuralNet.getNumHidden();
-	private static int numOutput = LUTNeuralNet.getNumoutput();	
+	private static int numOutput = LUTNeuralNet.getNumOutput();	
 	private static double learningRate_NN = LUTNeuralNet.getLearningRate(); // alpha
 	private static double learningRate = 0.2; // alpha
 	private static double momentumRate = LUTNeuralNet.getMomentumRate();
@@ -36,11 +36,14 @@ public class LearningAgent {
 	private double [] newActionOutput = new double[Action.NumRobotActions];
 	private double [] currentActionQ  = new double[Action.NumRobotActions];
 	private double [] newActionQ = new double[Action.NumRobotActions];
+	private double qError[][]= new double [State.NumStates][Action.NumRobotActions]; 
 	
 	private ArrayList<NeuralNet> neuralNetworks = new ArrayList<NeuralNet>();
 	public LearningAgent (QTable table) {
 		this.table = table;
 		for (int act = 0; act<Action.NumRobotActions; act++) {
+			//maxQ[act] = findMax(getColumn(table.getTable(),act));
+			//minQ[act] = findMin(getColumn(table.getTable(),act));
 			maxQ[act] = 120;
 			minQ[act] = -20;
 		}
@@ -95,7 +98,7 @@ public class LearningAgent {
 				for(NeuralNet theNet : neuralNetworks) {
 					int act = theNet.getNetID();
 					double currentNetOutput = theNet.outputFor(inputData)[0];
-					double currentNetQValue = LUTNeuralNet.inverseMappingOutput(currentNetOutput, maxQ[act], minQ[act], upperBound, lowerBound);//Reverse map output to big scale
+					double currentNetQValue = remappingOutputToQ(currentNetOutput, maxQ[act], minQ[act], upperBound, lowerBound);//Reverse map output to big scale
 					int currentNetIndex = theNet.getNetID();
 					setCurrentActionValue(currentNetOutput,currentNetIndex);//Probably wrong
 					setCurrentQValue(currentNetQValue,currentNetIndex);
@@ -108,7 +111,8 @@ public class LearningAgent {
 		return action;
 	}
 	
-			
+
+	//=========== Combine Q learn with Neural Network ==========
 	
 	// Get state (Current state)
 	// Choose action
@@ -116,7 +120,6 @@ public class LearningAgent {
 	// Get 7 output
 	//  Remaping to Q (Current)
 	// Choose the max action
-
 	// Execute action
 	// Get new state 
 	// Send into 7 NN
@@ -125,7 +128,7 @@ public class LearningAgent {
 	// Remap max OUTPUT to Q -> Q'
 	// Calculate the expected Q
 	// Use expected Q to do backpropogation 
-	public void nn_QLearn( int action, double reward) {
+	public void nn_QLearn( int state, int action, double reward) {
 		//Need to make currentData Array and new Data array is set before calling this function
 		double currentStateQValue = getCurrentQValues()[action] ;
 		double [] newInputData = new double[numStateCategory];
@@ -133,11 +136,10 @@ public class LearningAgent {
 		for(NeuralNet theNet: neuralNetworks) {
 			int act = theNet.getNetID();
 			double tempOutput = theNet.outputFor(newInputData)[0];
-			double tempQValue = LUTNeuralNet.inverseMappingOutput(tempOutput, maxQ[act], minQ[act], upperBound, lowerBound);
+			double tempQValue = remappingOutputToQ(tempOutput, maxQ[act], minQ[act], upperBound, lowerBound);
 			setNewActionValue(tempOutput,theNet.getNetID());
 			setNewQValue(tempQValue,theNet.getNetID());
 		}//Update the NewActionValue and newQValues Arrays
-		
 		int maxNewStateActionIndex = getMaxIndex(getNewActionValues());
 		double maxNewQValue = getNewQValues()[maxNewStateActionIndex];
 		double expectedQValue = currentStateQValue + learningRate*(reward + discountRate *maxNewQValue -currentStateQValue); 
@@ -146,6 +148,13 @@ public class LearningAgent {
 		NeuralNet learningNet = neuralNetworks.get(action);
 		double [] currentInputData = LUTNeuralNet.normalizeInputData(getNewStateArray());
 		learningNet.train(currentInputData, expectedOutput);
+		if (getCurrentQValues()[action] != 0) {
+			qError[state][action] = (getNewQValues()[action] - getCurrentQValues()[action])/getCurrentQValues()[action];
+		}
+		
+		//qError[state][action] = getNewQValues()[action] - getCurrentQValues()[action];
+		
+		
 	}
 
 	public void onlineLearn (int action, double reward) {
@@ -264,11 +273,9 @@ public class LearningAgent {
 	
 	public static double findMax (double []theValues) {
 		double maxQValue = theValues[0];
-		int maxIndex = 0;
 		for (int i = 0; i < theValues.length; i++) {
 			if(maxQValue < theValues[i]) {
 				maxQValue = theValues[i];
-				maxIndex = i;
 			}
 		}
 		return maxQValue;
@@ -276,11 +283,9 @@ public class LearningAgent {
 	
 	public static double findMin (double []theValues) {
 		double minQValue = theValues[0];
-		int minIndex = 0;
 		for (int i = 0; i < theValues.length; i++) {
 			if(minQValue > theValues[i]) {
 				minQValue = theValues[i];
-				minIndex = i;
 			}
 		}
 		return minQValue;
@@ -346,6 +351,15 @@ public class LearningAgent {
 	}
 	public ArrayList<NeuralNet> getNeuralNetworks(){
 		return this.neuralNetworks;
+		
+	}
+	
+	public double getQError (int state, int action) {
+		return qError[state][action];
+	}
+	
+	public void setQError (int state, int action, double value) {
+		qError[state][action] = value;
 	}
 
 }

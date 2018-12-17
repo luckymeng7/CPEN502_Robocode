@@ -1,13 +1,15 @@
 package NeuralNet;
+
 import Learning.*;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 
-
-
 public class LUTNeuralNet {
+	
 	/***Test Data*****/	
 	private static int numStateCategory = 6;
 	private static int numInput = numStateCategory;
@@ -18,41 +20,37 @@ public class LUTNeuralNet {
 	private static double momentumRate = 0.9;
 	private static double lowerBound = -1.0;
 	private static double upperBound = 1.0;
-	private static double [] maxQ = new double[Action.NumRobotActions];
-	private static double [] minQ = new double[Action.NumRobotActions];
-	
-	
+	private static double []maxQ = new double[Action.NumRobotActions];
+	private static double []minQ = new double[Action.NumRobotActions];
+
 	private static ArrayList<Double> errorInEachEpoch;
 	private static ArrayList<NeuralNet> neuralNetworks;
 
-	private static boolean isOnline = false;
 	
 	Neuron testNeuron = new Neuron("test");
 	
 	public static void main(String[] args){
 		QTable lut = new QTable();
-		//RX78_2_GunTank robot = new RX78_2_GunTank();
 		//File file = new File("E:\\Work\\java\\RoboCode_RL_NN\\LUT.dat");
 		File file = new File("LUT.dat");
 		lut.loadData(file);
 		double inputData[][] = new double [State.NumStates][numStateCategory];
 		double normExpectedOutput[][][] = new double [Action.NumRobotActions][State.NumStates][numOutput];
 		expectedOutput = lut.getTable();
+		//System.out.println(Arrays.deepToString(expectedOutput));
 /*		int index = States.getStateIndex(2, 5, 3,1,1, 0);
 		int [] states = States.getStateFromIndex(index);
 		double [] normstates = normalizeInputData(states);
 		System.out.println(Arrays.toString(normstates));*/
-		/*double temp = normalizeExpectedOutput(20,maxQ,minQ,upperBound,lowerBound);
-		System.out.println(Double.toString(temp));
-		System.out.println(Double.toString(inverseMappingOutput(temp,maxQ,minQ,upperBound,lowerBound)));*/
-		/*double [] temp = {-10.2, -10.35, 0.14, 0.58, 12.5};
-		double max = findMax(temp);
-		double min = findMin(temp);
-		System.out.println(Double.toString(min)+","+Double.toString(max));*/
+		//System.out.println(Double.toString(normalizeExpectedOutput(110,maxQ,minQ,upperBound,lowerBound)));
+
 		for(int act = 0; act<Action.NumRobotActions;act++) {
 			maxQ[act] = findMax(getColumn(expectedOutput,act));
 			minQ[act] = findMin(getColumn(expectedOutput,act));
+			//maxQ[act] = 120;
+			//minQ[act] = -20;
 		}
+		
 		for(int stateid = 0; stateid < State.NumStates; stateid++) {
 			int[]state = State.getStateFromIndex(stateid);
 			inputData[stateid] = normalizeInputData(state);
@@ -74,7 +72,7 @@ public class LUTNeuralNet {
 			}*/	
 		
 		for(int act = 0; act < Action.NumRobotActions; act++) {
-			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.00001,10000,1);
+			int average = EpochAverage(act,inputData,normExpectedOutput[act],0.000002,10000,1);
 			System.out.println(act+"The average of number of epoches to converge is: "+average+"\n");
 		}
 		
@@ -86,8 +84,7 @@ public class LUTNeuralNet {
 			}catch(IOException e) {
 				System.out.println(e);
 			}
-		}	
-		
+		}
 		
 		System.out.println("Test ends here");
 		
@@ -136,15 +133,10 @@ public class LUTNeuralNet {
 		return normalizedExpected;
 	}
 	
-	public static double inverseMappingOutput(double output, double maxQ, double minQ, double upperbound, double lowerbound) {
-		double QValue = 0.0;
-		if(QValue < -1.0) {
-			QValue = -1.0;
-		}else if(QValue > 1.0) {
-			QValue = 1.0;
-		}
-		QValue = minQ + (output-lowerbound)/(upperbound-lowerbound)*(maxQ - minQ);
-		return QValue;
+	public static double  remappingOutputToQ (double output, double max, double min, double upperbound, double lowerbound) {
+		double remappedQ = 0.0;
+		remappedQ = min + (output-lowerbound)*(max-min)/(upperbound - lowerbound);		
+		return remappedQ;
 	}
 	
 	/***
@@ -168,9 +160,15 @@ public class LUTNeuralNet {
 		success = 0;
 		NeuralNet testNeuronNet = null;
 		for(int i = 0; i < numTrials; i++) {
-			testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act); //Construct a new neural net object
+			testNeuronNet = new NeuralNet(numInput,numHidden,numOutput,learningRate,momentumRate,lowerBound,upperBound,act ); //Construct a new neural net object
 			tryConverge(testNeuronNet,input,expected,maxSteps, minError);//Train the network with step and error constrains
 			epochNumber = getErrorArray().size(); //get the epoch number of this trial.
+			try {
+				printRunResults(getErrorArray(), "Error_for_act_"+act+"_trail_"+numTrials+".csv");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			if( epochNumber < maxSteps) {
 				average = average +  epochNumber;
 				success ++; 
@@ -193,11 +191,10 @@ public class LUTNeuralNet {
 	public static void tryConverge(NeuralNet theNet, double[][] input, double [][] expected,int maxStep, double minError) {
 		int i;
 		double totalerror = 1;
-		double previouserror = 1;
-		double variation = 1;
+		double previousError = 0; 
 		errorInEachEpoch = new ArrayList<>();
-		for(i = 0; i < maxStep && variation > minError; i++) {
-			previouserror = totalerror;
+		for(i = 0; i < maxStep && Math.abs(totalerror-previousError) > minError; i++) {
+			previousError = totalerror;
 			totalerror = 0.0;
 			for(int j = 0; j < input.length; j++) {
 				totalerror += theNet.train(input[j],expected[j]);				
@@ -205,8 +202,8 @@ public class LUTNeuralNet {
 			//totalerror = totalerror*0.5;
 			totalerror = Math.sqrt(totalerror/input.length);
 			errorInEachEpoch.add(totalerror);
-			variation  = Math.abs(totalerror - previouserror);
-			
+			//System.out.println("totalerror: " + totalerror);
+			//System.out.println("previousError: " + previousError);
 		}
 		System.out.println("Sum of squared error in last epoch = " + totalerror);
 		System.out.println("Number of epoch: "+ i + "\n");
@@ -216,6 +213,18 @@ public class LUTNeuralNet {
 		
 	}
 	
+	
+	public static void printRunResults(ArrayList<Double> errors, String fileName) throws IOException {
+		int epoch;
+		PrintWriter printWriter = new PrintWriter(new FileWriter(fileName));
+		printWriter.printf("Epoch Number, Total Squared Error, \n");
+		for(epoch = 0; epoch < errors.size(); epoch++) {
+			printWriter.printf("%d, %f, \n", epoch, errors.get(epoch));
+		}
+		printWriter.flush();
+		printWriter.close();
+	}
+	
 	public static ArrayList <Double> getErrorArray(){
 		return errorInEachEpoch;
 	} 
@@ -223,50 +232,55 @@ public class LUTNeuralNet {
 	public static void setErrorArray(ArrayList<Double> errors) {
 		errorInEachEpoch = errors;
 	}
-	
-	public static double findMax(double [] theValues) {
+
+	public static double findMax (double []theValues) {
 		double maxQValue = theValues[0];
 		int maxIndex = 0;
-		for(int i = 0; i < theValues.length; i++) {
+		for (int i = 0; i < theValues.length; i++) {
 			if(maxQValue < theValues[i]) {
 				maxQValue = theValues[i];
 				maxIndex = i;
 			}
 		}
 		return maxQValue;
-	} 
+	}
 	
-	public static double findMin(double [] theValues) {
+	public static double findMin (double []theValues) {
 		double minQValue = theValues[0];
 		int minIndex = 0;
-		for(int i = 0; i < theValues.length; i++) {
+		for (int i = 0; i < theValues.length; i++) {
 			if(minQValue > theValues[i]) {
 				minQValue = theValues[i];
 				minIndex = i;
 			}
 		}
 		return minQValue;
-	} 
-	public static double[] getColumn(double[][] array, int index){
-	    double[] column = new double[State.NumStates]; // 
-	    for(int i=0; i<column.length; i++){
-	       column[i] = array[i][index];
-	    }
-	    return column;
+	}
+	
+	public static double[] getColumn(double[][] array, int index) {
+		double[] column = new double[State.NumStates];
+		for(int i = 0; i< column.length; i++ ) {
+			column[i] = array[i][index];
+		}
+		return column;
 	}
 	
 	public static int getNumInput() {
 		return numInput;
 	}
+	
 	public static int getNumHidden() {
 		return numHidden;
 	}
-	public static int getNumoutput() {
+	
+	public static int getNumOutput() {
 		return numOutput;
 	}
+	
 	public static double getLearningRate() {
 		return learningRate;
 	}
+	
 	public static double getMomentumRate() {
 		return momentumRate;
 	}

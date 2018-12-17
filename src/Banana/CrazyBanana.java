@@ -26,7 +26,7 @@ public class CrazyBanana extends AdvancedRobot {
 	
 	private double oppoDist, oppoBearing;
 	private boolean found = false;
-	private int state, action; 
+	private int state, action, currentState; 
 	
 	private double rewardForWin=100;
 	private double rewardForDeath=-20;
@@ -35,8 +35,11 @@ public class CrazyBanana extends AdvancedRobot {
 	private boolean interRewards = true;
 	private boolean isSARSA = false;
 	private boolean isOnline = true;
-	private boolean isNaive = false;
+	private boolean isNaive = true;
 	
+	private int chosenState;
+	private int chosenAction = 6;
+	private double errorChosenToPrint;
 	ArrayList<NeuralNet> templist = new ArrayList<NeuralNet>();
 	
 	/**
@@ -59,6 +62,7 @@ public class CrazyBanana extends AdvancedRobot {
 		 if(isOnline){
 				agent.initializeNeuralNetworks();
 				templist = agent.getNeuralNetworks();
+				
 				if(isNaive) {
 					if(getRoundNum()>0) {
 						for(NeuralNet theNet: agent.getNeuralNetworks()) {
@@ -80,11 +84,16 @@ public class CrazyBanana extends AdvancedRobot {
 					}
 				}
 				
-				state = getState();//Get Initial State
+				state = getState();//Get Initial State		
+							
+				
 				while(true) {
 					turnRadarRightRadians(2*PI);
 					agent.setCurrentStateArray(state);
 					action = agent.selectAction(state, isOnline);
+					currentState = state;
+					if (State.getHeading(getHeading()) == 2 ) chosenState = currentState;
+					//chosenAction = action;
 					switch(action) {
 						case Action.RobotAhead:
 							setAhead(Action.RobotMoveDistance);
@@ -122,7 +131,8 @@ public class CrazyBanana extends AdvancedRobot {
 					//Update states
 					state = getState();
 					agent.setNewStateArray(state);
-					agent.nn_QLearn(action, reward);
+					agent.nn_QLearn(currentState, action, reward);
+					if (State.getHeading(getHeading()) == 2 && action == chosenAction) errorChosenToPrint = agent.getQError(currentState, action);
 					accumuReward += reward;					
 					//Reset Values
 					reward = 0.0d;
@@ -391,7 +401,7 @@ public class CrazyBanana extends AdvancedRobot {
   		try { 
   			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("battle_history.dat").getAbsolutePath(), true)); 
   			//w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate+" \t"+ winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] + " \t" + updateBattleHistory (1)); 
-  			w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate);
+  			w.println(accumuReward+" \t"+getRoundNum()+" \t"+winningFlag+" \t"+LearningAgent.explorationRate+" \t"+ chosenState + " \t" + chosenAction + " \t" + Math.abs(errorChosenToPrint));
   			if (w.checkError()) 
   				System.out.println("Could not save the data!");  //setTurnLeft(180 - (target.bearing + 90 - 30));
   				w.close(); 
@@ -428,13 +438,13 @@ public class CrazyBanana extends AdvancedRobot {
 				net.save_robot(getDataFile("Weight_"+net.getNetID()+".dat"));
 			}			
 		}
-				
+		
 		int losingFlag=0;
 		PrintStream w = null; 
 		try { 
 			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("battle_history.dat").getAbsolutePath(), true)); 
 			//w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate+" \t"+ winningRateArray[(getRoundNum()-numSavedBattle)%numSavedRate] + " \t" + updateBattleHistory (0)); 
-			w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate);
+			w.println(accumuReward+" \t"+getRoundNum()+" \t"+losingFlag+" \t"+LearningAgent.explorationRate+" \t" + chosenState + " \t" + chosenAction + " \t" + Math.abs(errorChosenToPrint));
 			if (w.checkError()) 
 				System.out.println("Could not save the data!"); 
 			w.close(); 
